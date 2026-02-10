@@ -31,6 +31,22 @@
       <BaseButton variant="ghost" size="small" @click="handleImport">
         📥 Import
       </BaseButton>
+      <BaseButton
+        variant="ghost"
+        size="small"
+        :is-disabled="!canUndoUiAction"
+        @click="handleUndoAction"
+      >
+        ↶ Undo
+      </BaseButton>
+      <BaseButton
+        variant="ghost"
+        size="small"
+        :is-disabled="!canRedoUiAction"
+        @click="handleRedoAction"
+      >
+        ↷ Redo
+      </BaseButton>
       <input
         ref="fileInputReference"
         type="file"
@@ -62,6 +78,8 @@ const selectedThemeMode = computed(
 const isWorkflowAutosaveInProgress = computed(
   () => workflowCanvasStore.isWorkflowAutosaveInProgress,
 );
+const canUndoUiAction = computed(() => workflowCanvasStore.canUndoUiAction);
+const canRedoUiAction = computed(() => workflowCanvasStore.canRedoUiAction);
 
 function handleExport() {
   const jsonString = workflowCanvasStore.exportWorkflow();
@@ -80,6 +98,14 @@ function handleExport() {
 
 function handleImport() {
   fileInputReference.value?.click();
+}
+
+function handleUndoAction() {
+  workflowCanvasStore.undoLastUiAction();
+}
+
+function handleRedoAction() {
+  workflowCanvasStore.redoLastUiAction();
 }
 
 function onThemeModeChanged(themeMode: string) {

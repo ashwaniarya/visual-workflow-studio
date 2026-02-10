@@ -16,9 +16,18 @@ import DecisionNodeRenderer from "./nodeRenderers/DecisionNodeRenderer.vue";
 import SwitchNodeRenderer from "./nodeRenderers/SwitchNodeRenderer.vue";
 import EndNodeRenderer from "./nodeRenderers/EndNodeRenderer.vue";
 import DeletableEdgeRenderer from "./edgeRenderers/DeletableEdgeRenderer.vue";
+import WorkflowMiniMapPanel from "./WorkflowMiniMapPanel.vue";
 
 const workflowStore = useWorkflowCanvasStore();
-const { onConnect, onNodeClick, onNodesChange, onEdgesChange, project } = useVueFlow({
+const {
+  onConnect,
+  onNodeClick,
+  onNodesChange,
+  onEdgesChange,
+  onNodeDragStart,
+  onNodeDragStop,
+  project,
+} = useVueFlow({
   nodes: workflowStore.nodes,
   edges: workflowStore.edges,
   minZoom: WORKFLOW_CONSTANTS.MIN_ZOOM,
@@ -27,6 +36,7 @@ const { onConnect, onNodeClick, onNodesChange, onEdgesChange, project } = useVue
 });
 
 let nodeIdCounter = 0;
+const dragStartPositionByNodeId = new Map<string, { x: number; y: number }>();
 
 function generateNodeId(): string {
   nodeIdCounter++;
@@ -101,6 +111,39 @@ onEdgesChange((edgeChanges: EdgeChange[]) => {
   workflowStore.applyEdgeChanges(edgeChanges);
 });
 
+onNodeDragStart(({ node }) => {
+  dragStartPositionByNodeId.set(node.id, {
+    x: node.position.x,
+    y: node.position.y,
+  });
+});
+
+onNodeDragStop(({ node }) => {
+  const dragStartPosition = dragStartPositionByNodeId.get(node.id);
+  dragStartPositionByNodeId.delete(node.id);
+  if (!dragStartPosition) {
+    return;
+  }
+
+  const dragEndPosition = {
+    x: node.position.x,
+    y: node.position.y,
+  };
+  const hasNodePositionChanged =
+    dragStartPosition.x !== dragEndPosition.x ||
+    dragStartPosition.y !== dragEndPosition.y;
+
+  if (!hasNodePositionChanged) {
+    return;
+  }
+
+  workflowStore.recordNodeMoveByBoundaryPositions(
+    node.id,
+    dragStartPosition,
+    dragEndPosition,
+  );
+});
+
 // ─── Node click handler ─────────────────────────────────────────────
 
 onNodeClick(({ node }) => {
@@ -149,6 +192,7 @@ function onPaneClick() {
       </template>
 
       <Background />
+      <WorkflowMiniMapPanel />
       <Controls />
     </VueFlow>
   </div>

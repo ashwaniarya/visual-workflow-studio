@@ -7,6 +7,18 @@ import { getNodeDefinition, getAllNodeDefinitions } from '../registry/nodeRegist
 import { canConnect, executeWorkflow } from '../engine/workflowEngine'
 import { WorkNodeSerialization } from '../serialization/workNodeSerialization'
 import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
+import type { WorkflowCommand } from './helpers/workflowCommandHistory'
+import { WorkflowCommandHistory } from './helpers/workflowCommandHistory'
+import {
+  createAddEdgeCommand,
+  createAddNodeCommand,
+  createMoveNodeCommand,
+  createRemoveEdgeCommand,
+  createRemoveNodeCommand,
+  createUpdateNodeConfigCommand,
+  type NodeCanvasPosition,
+  type NodeConfigSnapshot,
+} from './helpers/workflowCommandFactories'
 import {
   addEdgeToAdjacencyIndex,
   assertGraphStateConsistency,
@@ -33,6 +45,9 @@ interface WorkflowCanvasState {
   lastWorkflowAutosavedTimestamp: number | null
   workflowAutosaveDebounceTimerId: ReturnType<typeof setTimeout> | null
   workflowAutosaveIndicatorTimerId: ReturnType<typeof setTimeout> | null
+  workflowCommandHistory: WorkflowCommandHistory
+  undoCommandDepth: number
+  redoCommandDepth: number
 }
 
 // ─── Store Definition ────────────────────────────────────────────────
@@ -52,6 +67,11 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
     lastWorkflowAutosavedTimestamp: null,
     workflowAutosaveDebounceTimerId: null,
     workflowAutosaveIndicatorTimerId: null,
+    workflowCommandHistory: new WorkflowCommandHistory(
+      WORKFLOW_CONSTANTS.MAX_UNDO_REDO_HISTORY_STEPS,
+    ),
+    undoCommandDepth: 0,
+    redoCommandDepth: 0,
   }),
 
   getters: {
@@ -76,9 +96,57 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
     availableNodeDefinitions() {
       return getAllNodeDefinitions()
     },
+
+    canUndoUiAction(state): boolean {
+      return state.undoCommandDepth > 0
+    },
+
+    canRedoUiAction(state): boolean {
+      return state.redoCommandDepth > 0
+    },
   },
 
   actions: {
+    synchronizeCommandHistoryDepths() {
+      this.undoCommandDepth = this.workflowCommandHistory.undoDepth
+      this.redoCommandDepth = this.workflowCommandHistory.redoDepth
+    },
+
+    clearUiCommandHistory() {
+      this.workflowCommandHistory.clear()
+      this.synchronizeCommandHistoryDepths()
+    },
+
+    runUiCommand(
+      workflowCommand: WorkflowCommand,
+      options?: { shouldAutosave?: boolean },
+    ): boolean {
+      const hasCommandExecuted = this.workflowCommandHistory.runCommand(workflowCommand)
+      this.synchronizeCommandHistoryDepths()
+      if (hasCommandExecuted && options?.shouldAutosave !== false) {
+        this.scheduleWorkflowAutosave()
+      }
+      return hasCommandExecuted
+    },
+
+    undoLastUiAction(options?: { shouldAutosave?: boolean }): boolean {
+      const hasUndoApplied = this.workflowCommandHistory.undo()
+      this.synchronizeCommandHistoryDepths()
+      if (hasUndoApplied && options?.shouldAutosave !== false) {
+        this.scheduleWorkflowAutosave()
+      }
+      return hasUndoApplied
+    },
+
+    redoLastUiAction(options?: { shouldAutosave?: boolean }): boolean {
+      const hasRedoApplied = this.workflowCommandHistory.redo()
+      this.synchronizeCommandHistoryDepths()
+      if (hasRedoApplied && options?.shouldAutosave !== false) {
+        this.scheduleWorkflowAutosave()
+      }
+      return hasRedoApplied
+    },
+
     beginWorkflowAutosaveIndicator() {
       this.isWorkflowAutosaveInProgress = true
 
@@ -188,12 +256,13 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
         this.edgeById = normalizedGraphState.edgeById
         this.adjacencyByNodeId = normalizedGraphState.adjacencyByNodeId
       })
+      this.clearUiCommandHistory()
       if (options?.shouldAutosave !== false) {
         this.scheduleWorkflowAutosave()
       }
     },
 
-    addNode(renderNode: RenderWorkNode, options?: { shouldAutosave?: boolean }): boolean {
+    applyAddNodePrimitive(renderNode: RenderWorkNode): boolean {
       let hasNodeBeenAdded = false
       this.runAtomicGraphMutation(() => {
         if (this.nodeById.has(renderNode.id)) {
@@ -205,13 +274,10 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
         this.graphNodes.push(renderNode)
         hasNodeBeenAdded = true
       })
-      if (hasNodeBeenAdded && options?.shouldAutosave !== false) {
-        this.scheduleWorkflowAutosave()
-      }
       return hasNodeBeenAdded
     },
 
-    removeNode(nodeId: string, options?: { shouldAutosave?: boolean }): boolean {
+    applyRemoveNodePrimitive(nodeId: string): boolean {
       if (!this.nodeById.has(nodeId)) {
         return false
       }
@@ -219,7 +285,7 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
       this.runAtomicGraphMutation(() => {
         const incidentEdgeIds = Array.from(this.adjacencyByNodeId.get(nodeId) ?? [])
         for (const edgeId of incidentEdgeIds) {
-          this.removeEdge(edgeId, { shouldAutosave: false })
+          this.applyRemoveEdgePrimitive(edgeId)
         }
 
         this.nodeById.delete(nodeId)
@@ -236,44 +302,67 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
 
         this.nodeExecutionStateMap.delete(nodeId)
       })
-      if (options?.shouldAutosave !== false) {
-        this.scheduleWorkflowAutosave()
+      return true
+    },
+
+    applyNodeConfigValuePrimitive(nodeId: string, key: string, value: unknown): boolean {
+      const node = this.nodeById.get(nodeId)
+      if (!node?.data?.workNode) {
+        return false
+      }
+      node.data.workNode.config[key] = value
+
+      const definition = getNodeDefinition(node.data.workNode.type)
+      if (definition.portResolver) {
+        const resolvedPortDefinition = definition.portResolver(node.data.workNode.config)
+        node.data.portDefinition = resolvedPortDefinition
+
+        const validOutputPortIds = new Set(resolvedPortDefinition.outputPorts.map((p) => p.id))
+        const invalidEdgeIds = Array.from(this.adjacencyByNodeId.get(nodeId) ?? []).filter((edgeId) => {
+          const edge = this.edgeById.get(edgeId)
+          if (!edge || edge.source !== nodeId) {
+            return false
+          }
+
+          return !validOutputPortIds.has(edge.sourceHandle ?? 'out-0')
+        })
+
+        for (const invalidEdgeId of invalidEdgeIds) {
+          this.applyRemoveEdgePrimitive(invalidEdgeId)
+        }
       }
       return true
     },
 
-    updateConfigOfNodeById(nodeId: string, key: string, value: unknown) {
+    applyNodeConfigSnapshotPrimitive(nodeId: string, configSnapshot: NodeConfigSnapshot): boolean {
       const node = this.nodeById.get(nodeId)
-      if (node?.data?.workNode) {
-        node.data.workNode.config[key] = value
-
-        // If this node type has a portResolver, recompute ports from config
-        const definition = getNodeDefinition(node.data.workNode.type)
-        if (definition.portResolver) {
-          const resolvedPortDefinition = definition.portResolver(node.data.workNode.config)
-          node.data.portDefinition = resolvedPortDefinition
-
-          // Prune edges whose sourceHandle no longer exists on this node
-          const validOutputPortIds = new Set(resolvedPortDefinition.outputPorts.map((p) => p.id))
-          const invalidEdgeIds = Array.from(this.adjacencyByNodeId.get(nodeId) ?? []).filter((edgeId) => {
-            const edge = this.edgeById.get(edgeId)
-            if (!edge || edge.source !== nodeId) {
-              return false
-            }
-
-            return !validOutputPortIds.has(edge.sourceHandle ?? 'out-0')
-          })
-
-          for (const invalidEdgeId of invalidEdgeIds) {
-            this.removeEdge(invalidEdgeId, { shouldAutosave: false })
-          }
-        }
-
-        this.scheduleWorkflowAutosave()
+      if (!node?.data?.workNode) {
+        return false
       }
+      node.data.workNode.config = JSON.parse(JSON.stringify(configSnapshot))
+      const definition = getNodeDefinition(node.data.workNode.type)
+      if (definition.portResolver) {
+        const resolvedPortDefinition = definition.portResolver(node.data.workNode.config)
+        node.data.portDefinition = resolvedPortDefinition
+      }
+      return true
     },
 
-    updatePositionOfNodeById(nodeId: string, position: { x: number, y: number }): boolean {
+    getNodeConfigSnapshotByNodeId(nodeId: string): NodeConfigSnapshot | null {
+      const node = this.nodeById.get(nodeId)
+      if (!node?.data?.workNode) {
+        return null
+      }
+      return JSON.parse(JSON.stringify(node.data.workNode.config))
+    },
+
+    getIncidentEdgesByNodeId(nodeId: string): Edge[] {
+      return Array.from(this.adjacencyByNodeId.get(nodeId) ?? [])
+        .map((edgeId) => this.edgeById.get(edgeId))
+        .filter((edge): edge is Edge => Boolean(edge))
+    },
+
+    applyMoveNodePrimitive(nodeId: string, position: NodeCanvasPosition): boolean {
       const node = this.nodeById.get(nodeId)
       if (node) {
         node.position.x = position.x
@@ -283,21 +372,77 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
       return false
     },
 
+    addNode(renderNode: RenderWorkNode, options?: { shouldAutosave?: boolean }): boolean {
+      const addNodeCommand = createAddNodeCommand({
+        renderNode,
+        applyAddNodePrimitive: (candidateRenderNode) => this.applyAddNodePrimitive(candidateRenderNode),
+        applyRemoveNodePrimitive: (candidateNodeId) => this.applyRemoveNodePrimitive(candidateNodeId),
+      })
+      return this.runUiCommand(addNodeCommand, options)
+    },
+
+    removeNode(nodeId: string, options?: { shouldAutosave?: boolean }): boolean {
+      const removeNodeCommand = createRemoveNodeCommand({
+        nodeId,
+        getNodeById: (candidateNodeId) => this.nodeById.get(candidateNodeId),
+        getIncidentEdgesByNodeId: (candidateNodeId) => this.getIncidentEdgesByNodeId(candidateNodeId),
+        applyAddNodePrimitive: (candidateRenderNode) => this.applyAddNodePrimitive(candidateRenderNode),
+        applyRemoveNodePrimitive: (candidateNodeId) => this.applyRemoveNodePrimitive(candidateNodeId),
+        applyAddEdgePrimitive: (candidateEdge) => this.applyAddEdgePrimitive(candidateEdge),
+      })
+      return this.runUiCommand(removeNodeCommand, options)
+    },
+
+    updateConfigOfNodeById(nodeId: string, key: string, value: unknown, options?: { shouldAutosave?: boolean }): boolean {
+      const updateNodeConfigCommand = createUpdateNodeConfigCommand({
+        nodeId,
+        fieldKey: key,
+        fieldValue: value,
+        getNodeConfigSnapshotByNodeId: (candidateNodeId) => this.getNodeConfigSnapshotByNodeId(candidateNodeId),
+        applyNodeConfigValuePrimitive: (candidateNodeId, candidateFieldKey, candidateFieldValue) =>
+          this.applyNodeConfigValuePrimitive(candidateNodeId, candidateFieldKey, candidateFieldValue),
+        applyNodeConfigSnapshotPrimitive: (candidateNodeId, candidateConfigSnapshot) =>
+          this.applyNodeConfigSnapshotPrimitive(candidateNodeId, candidateConfigSnapshot),
+      })
+      return this.runUiCommand(updateNodeConfigCommand, options)
+    },
+
+    updatePositionOfNodeById(nodeId: string, position: NodeCanvasPosition, options?: { shouldAutosave?: boolean }): boolean {
+      const node = this.nodeById.get(nodeId)
+      if (!node) {
+        return false
+      }
+      return this.recordNodeMoveByBoundaryPositions(
+        nodeId,
+        { x: node.position.x, y: node.position.y },
+        position,
+        options,
+      )
+    },
+
+    recordNodeMoveByBoundaryPositions(
+      nodeId: string,
+      beforePosition: NodeCanvasPosition,
+      afterPosition: NodeCanvasPosition,
+      options?: { shouldAutosave?: boolean },
+    ): boolean {
+      if (!this.nodeById.has(nodeId)) {
+        return false
+      }
+      const moveNodeCommand = createMoveNodeCommand({
+        nodeId,
+        beforePosition,
+        afterPosition,
+        applyMoveNodePrimitive: (candidateNodeId, candidatePosition) =>
+          this.applyMoveNodePrimitive(candidateNodeId, candidatePosition),
+      })
+      return this.runUiCommand(moveNodeCommand, options)
+    },
+
     applyNodeChanges(nodeChanges: NodeChange[]) {
       let shouldScheduleWorkflowAutosave = false
 
       for (const nodeChange of nodeChanges) {
-        if (nodeChange.type === 'position' && nodeChange.position) {
-          const hasNodePositionChanged = this.updatePositionOfNodeById(nodeChange.id, {
-            x: nodeChange.position.x,
-            y: nodeChange.position.y,
-          })
-          if (hasNodePositionChanged) {
-            shouldScheduleWorkflowAutosave = true
-          }
-          continue
-        }
-
         if (nodeChange.type === 'remove') {
           const hasNodeBeenRemoved = this.removeNode(nodeChange.id, { shouldAutosave: false })
           if (hasNodeBeenRemoved) {
@@ -328,7 +473,7 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
       }
     },
 
-    addEdge(edge: Edge, options?: { shouldAutosave?: boolean }): boolean {
+    applyAddEdgePrimitive(edge: Edge): boolean {
       const isValid = canConnect(
         edge.source,
         edge.sourceHandle ?? 'out-0',
@@ -352,15 +497,10 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
         this.graphEdges.push(normalizedEdge)
         hasEdgeBeenAdded = true
       })
-
-      if (hasEdgeBeenAdded && options?.shouldAutosave !== false) {
-        this.scheduleWorkflowAutosave()
-      }
-
       return hasEdgeBeenAdded
     },
 
-    removeEdge(edgeId: string, options?: { shouldAutosave?: boolean }): boolean {
+    applyRemoveEdgePrimitive(edgeId: string): boolean {
       if (!this.edgeById.has(edgeId)) {
         return false
       }
@@ -379,10 +519,26 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
           this.graphEdges.splice(edgeIndex, 1)
         }
       })
-      if (options?.shouldAutosave !== false) {
-        this.scheduleWorkflowAutosave()
-      }
       return true
+    },
+
+    addEdge(edge: Edge, options?: { shouldAutosave?: boolean }): boolean {
+      const addEdgeCommand = createAddEdgeCommand({
+        edge,
+        applyAddEdgePrimitive: (candidateEdge) => this.applyAddEdgePrimitive(candidateEdge),
+        applyRemoveEdgePrimitive: (candidateEdgeId) => this.applyRemoveEdgePrimitive(candidateEdgeId),
+      })
+      return this.runUiCommand(addEdgeCommand, options)
+    },
+
+    removeEdge(edgeId: string, options?: { shouldAutosave?: boolean }): boolean {
+      const removeEdgeCommand = createRemoveEdgeCommand({
+        edgeId,
+        getEdgeById: (candidateEdgeId) => this.edgeById.get(candidateEdgeId),
+        applyAddEdgePrimitive: (candidateEdge) => this.applyAddEdgePrimitive(candidateEdge),
+        applyRemoveEdgePrimitive: (candidateEdgeId) => this.applyRemoveEdgePrimitive(candidateEdgeId),
+      })
+      return this.runUiCommand(removeEdgeCommand, options)
     },
 
     applyEdgeChanges(edgeChanges: EdgeChange[]) {

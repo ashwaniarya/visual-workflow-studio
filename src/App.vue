@@ -1,12 +1,51 @@
 <script setup lang="ts">
 // Import registry to trigger built-in node registrations on app boot
 import "./registry/nodeRegistry";
+import { onMounted, onUnmounted } from "vue";
+import { useWorkflowCanvasStore } from "./stores/workflowCanvasStore";
+import { WORKFLOW_CONSTANTS } from "./config/workflowConstants";
 
 import AppHeader from "./components/AppHeader.vue";
 import WorkFlowToolBar from "./components/WorkFlowToolBar.vue";
 import WorkFlowCanvas from "./components/WorkFlowCanvas.vue";
 import WorkFlowConfigPanel from "./components/WorkFlowConfigPanel.vue";
 import WorkFlowExecutionLog from "./components/WorkFlowExecutionLog.vue";
+
+const workflowCanvasStore = useWorkflowCanvasStore();
+
+function onGlobalWorkflowUndoRedoShortcut(keyboardEvent: KeyboardEvent) {
+  const isModifierPressed = keyboardEvent.ctrlKey || keyboardEvent.metaKey;
+  if (!isModifierPressed) {
+    return;
+  }
+
+  const isUndoShortcut =
+    keyboardEvent.key.toLowerCase() === "z" && !keyboardEvent.shiftKey;
+  if (isUndoShortcut) {
+    keyboardEvent.preventDefault();
+    workflowCanvasStore.undoLastUiAction();
+    return;
+  }
+
+  const isShiftRedoShortcut =
+    keyboardEvent.key.toLowerCase() === "z" && keyboardEvent.shiftKey;
+  const isDefaultRedoShortcut = WORKFLOW_CONSTANTS.REDO_SHORTCUT_KEYS.includes(
+    keyboardEvent.key as (typeof WORKFLOW_CONSTANTS.REDO_SHORTCUT_KEYS)[number],
+  ) && keyboardEvent.key.toLowerCase() === "y";
+
+  if (isShiftRedoShortcut || isDefaultRedoShortcut) {
+    keyboardEvent.preventDefault();
+    workflowCanvasStore.redoLastUiAction();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", onGlobalWorkflowUndoRedoShortcut);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", onGlobalWorkflowUndoRedoShortcut);
+});
 </script>
 
 <template>

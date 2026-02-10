@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import type { Edge, NodeChange, EdgeChange } from '@vue-flow/core'
 import type { RenderWorkNode } from '../models/renderWorkNode'
 import { useWorkflowCanvasStore } from './workflowCanvasStore'
+import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
 import { getNodeDefinition } from '../registry/nodeRegistry'
 import { createWorkNode } from '../factory/workNodeFactory'
 
@@ -122,15 +123,14 @@ describe('workflowCanvasStore selective graph updates', () => {
       createRenderEdge('edge-start-end', 'start-node', 'end-node'),
     )
 
-    const nodeBeforePositionChange = workflowCanvasStore.nodeById.get('start-node')
-
     workflowCanvasStore.applyNodeChanges([
       {
         id: 'start-node',
-        type: 'position',
-        position: { x: 180, y: 260 },
+        type: 'select',
+        selected: true,
       } as NodeChange,
     ])
+
     workflowCanvasStore.applyEdgeChanges([
       {
         id: 'edge-start-end',
@@ -138,9 +138,7 @@ describe('workflowCanvasStore selective graph updates', () => {
       } as EdgeChange,
     ])
 
-    const nodeAfterPositionChange = workflowCanvasStore.nodeById.get('start-node')
-    expect(nodeAfterPositionChange).toBe(nodeBeforePositionChange)
-    expect(nodeAfterPositionChange?.position).toEqual({ x: 180, y: 260 })
+    expect(workflowCanvasStore.selectedNodeId).toBe('start-node')
     expect(workflowCanvasStore.edges).toHaveLength(0)
   })
 
@@ -168,5 +166,167 @@ describe('workflowCanvasStore selective graph updates', () => {
     expect(workflowCanvasStore.edgeById.has('edge-rewire')).toBe(true)
     expect(workflowCanvasStore.edges).toHaveLength(1)
     expect(workflowCanvasStore.edges[0]?.target).toBe('latest-target-node')
+  })
+
+  it('undoes and redoes graph add and remove commands', () => {
+    const workflowCanvasStore = useWorkflowCanvasStore()
+    const startNode = createRenderNode('start-node', 'START')
+    const endNode = createRenderNode('end-node', 'END')
+    const edge = createRenderEdge('edge-start-end', 'start-node', 'end-node')
+
+    workflowCanvasStore.addNode(startNode, { shouldAutosave: false })
+    workflowCanvasStore.addNode(endNode, { shouldAutosave: false })
+    workflowCanvasStore.addEdge(edge, { shouldAutosave: false })
+
+    expect(workflowCanvasStore.canUndoUiAction).toBe(true)
+    expect(workflowCanvasStore.edges).toHaveLength(1)
+
+    workflowCanvasStore.undoLastUiAction({ shouldAutosave: false })
+    expect(workflowCanvasStore.edges).toHaveLength(0)
+
+    workflowCanvasStore.redoLastUiAction({ shouldAutosave: false })
+    expect(workflowCanvasStore.edges).toHaveLength(1)
+    expect(workflowCanvasStore.canRedoUiAction).toBe(false)
+  })
+
+  it('clears redo stack after new command is executed', () => {
+    const workflowCanvasStore = useWorkflowCanvasStore()
+    const startNode = createRenderNode('start-node', 'START')
+    const endNode = createRenderNode('end-node', 'END')
+
+    workflowCanvasStore.addNode(startNode, { shouldAutosave: false })
+    workflowCanvasStore.addNode(endNode, { shouldAutosave: false })
+    workflowCanvasStore.undoLastUiAction({ shouldAutosave: false })
+    expect(workflowCanvasStore.canRedoUiAction).toBe(true)
+
+    workflowCanvasStore.addNode(createRenderNode('third-node', 'END'), { shouldAutosave: false })
+    expect(workflowCanvasStore.canRedoUiAction).toBe(false)
+  })
+
+  it('restores node config snapshots through undo and redo', () => {
+    const workflowCanvasStore = useWorkflowCanvasStore()
+    const transformNode = createRenderNode('transform-node', 'TRANSFORM')
+    workflowCanvasStore.addNode(transformNode, { shouldAutosave: false })
+
+    const workflowNodeInStore = workflowCanvasStore.nodeById.get('transform-node')
+    if (!workflowNodeInStore?.data?.workNode) {
+      throw new Error('Expected transform node to be present in store')
+    }
+
+    const previousLabel = String(workflowNodeInStore.data.workNode.config.label ?? '')
+    workflowCanvasStore.updateConfigOfNodeById(
+      'transform-node',
+      'label',
+      'Renamed Transform Node',
+      { shouldAutosave: false },
+    )
+    expect(workflowNodeInStore.data.workNode.config.label).toBe('Renamed Transform Node')
+
+    workflowCanvasStore.undoLastUiAction({ shouldAutosave: false })
+    expect(String(workflowNodeInStore.data.workNode.config.label ?? '')).toBe(previousLabel)
+
+    workflowCanvasStore.redoLastUiAction({ shouldAutosave: false })
+    expect(workflowNodeInStore.data.workNode.config.label).toBe('Renamed Transform Node')
+  })
+
+  it('caps undo stack depth using centralized configuration', () => {
+    const workflowCanvasStore = useWorkflowCanvasStore()
+
+    for (let commandIndex = 0; commandIndex < WORKFLOW_CONSTANTS.MAX_UNDO_REDO_HISTORY_STEPS + 5; commandIndex++) {
+      workflowCanvasStore.addNode(
+        createRenderNode(`node-${commandIndex}`, 'END'),
+        { shouldAutosave: false },
+      )
+    }
+
+    let undoCount = 0
+    while (workflowCanvasStore.undoLastUiAction({ shouldAutosave: false })) {
+      undoCount++
+    }
+
+    expect(undoCount).toBe(WORKFLOW_CONSTANTS.MAX_UNDO_REDO_HISTORY_STEPS)
+  })
+
+  it('undoes and redoes node move command with explicit positions', () => {
+    const workflowCanvasStore = useWorkflowCanvasStore()
+    const startNode = createRenderNode('start-node', 'START')
+    workflowCanvasStore.addNode(startNode, { shouldAutosave: false })
+    workflowCanvasStore.clearUiCommandHistory()
+
+    const hasMoveApplied = workflowCanvasStore.updatePositionOfNodeById(
+      'start-node',
+      { x: 180, y: 260 },
+      { shouldAutosave: false },
+    )
+    expect(hasMoveApplied).toBe(true)
+    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
+      x: 180,
+      y: 260,
+    })
+
+    const hasUndoApplied = workflowCanvasStore.undoLastUiAction({ shouldAutosave: false })
+    expect(hasUndoApplied).toBe(true)
+    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
+      x: 0,
+      y: 0,
+    })
+
+    const hasRedoApplied = workflowCanvasStore.redoLastUiAction({ shouldAutosave: false })
+    expect(hasRedoApplied).toBe(true)
+    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
+      x: 180,
+      y: 260,
+    })
+  })
+
+  it('does not push history for no-op move command', () => {
+    const workflowCanvasStore = useWorkflowCanvasStore()
+    const startNode = createRenderNode('start-node', 'START')
+    workflowCanvasStore.addNode(startNode, { shouldAutosave: false })
+    workflowCanvasStore.clearUiCommandHistory()
+
+    const hasMoveApplied = workflowCanvasStore.updatePositionOfNodeById(
+      'start-node',
+      { x: 0, y: 0 },
+      { shouldAutosave: false },
+    )
+
+    expect(hasMoveApplied).toBe(false)
+    expect(workflowCanvasStore.canUndoUiAction).toBe(false)
+    expect(workflowCanvasStore.undoCommandDepth).toBe(0)
+  })
+
+  it('records move command from explicit drag boundary positions', () => {
+    const workflowCanvasStore = useWorkflowCanvasStore()
+    const startNode = createRenderNode('start-node', 'START')
+    workflowCanvasStore.addNode(startNode, { shouldAutosave: false })
+    workflowCanvasStore.clearUiCommandHistory()
+
+    workflowCanvasStore.applyMoveNodePrimitive('start-node', { x: 180, y: 260 })
+    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
+      x: 180,
+      y: 260,
+    })
+
+    const hasMoveRecorded = workflowCanvasStore.recordNodeMoveByBoundaryPositions(
+      'start-node',
+      { x: 0, y: 0 },
+      { x: 180, y: 260 },
+      { shouldAutosave: false },
+    )
+    expect(hasMoveRecorded).toBe(true)
+    expect(workflowCanvasStore.canUndoUiAction).toBe(true)
+
+    workflowCanvasStore.undoLastUiAction({ shouldAutosave: false })
+    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
+      x: 0,
+      y: 0,
+    })
+
+    workflowCanvasStore.redoLastUiAction({ shouldAutosave: false })
+    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
+      x: 180,
+      y: 260,
+    })
   })
 })
