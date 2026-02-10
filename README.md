@@ -26,7 +26,9 @@ npm run preview
 npm run test
 ```
 
-# Architectural
+# Architecture
+
+## High Level Design
 
 At a high level, the canvas drives graph mutations, graph state feeds execution and persistence, and node behavior is resolved through registry + factory + executor strategy:
 
