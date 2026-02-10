@@ -31,13 +31,13 @@ npm run test
 ## High Level Design
 
 At a high level, the system works like a closed loop between UI intent, graph state, and runtime execution.  
-When a user drags, connects, edits, or deletes on the canvas, `WorkFlowCanvas` emits change events and the graph store applies only the required mutation. That updated graph state then becomes the single source used by two downstream paths: persistence (autosave/import-export) and execution (engine run + node status).  
+When a user drags, connects, edits, or deletes on the canvas, [`WorkFlowCanvas`](src/components/WorkFlowCanvas.vue) emits change events and the graph store applies only the required mutation. That updated graph state then becomes the single source used by two downstream paths: persistence (autosave/import-export) and execution (engine run + node status).  
 Node behavior itself is not hard-coded in the canvas. Instead, the node type is looked up in the registry, the factory creates the work-node instance, and the executor strategy is resolved from node config at runtime. This keeps UI rendering, graph mutation, and execution logic decoupled while still flowing through one consistent state model.
 
 In short, the architecture follows this event flow:
 
 1. **User action on canvas** -> event stream (`add`, `move`, `connect`, `config change`).
-2. **Graph mutation boundary** -> `workflowGraphStore` updates nodes/edges/indexes.
+2. **Graph mutation boundary** -> [`workflowGraphStore`](src/stores/workflowGraphStore.ts) updates nodes/edges/indexes.
 3. **System side effects** -> history tracking + autosave scheduling.
 4. **Execution path** -> engine reads graph snapshot and runs node executors.
 5. **Feedback path** -> execution log and per-node state feed UI highlights and diagnostics.
@@ -58,23 +58,23 @@ flowchart LR
 
 Project structure and key components:
 
-- `src/components/`
-  - `WorkFlowCanvas.vue`: drag/drop, connect, node/edge change streams.
-  - `nodeRenderers/*`: node visual contracts per type.
-  - `edgeRenderers/*`: edge-level controls (for example delete edge interaction).
-- `src/stores/`
-  - `workflowGraphStore.ts`: graph domain state + normalized indexes.
-  - `workflowHistoryStore.ts`: command history, undo/redo lifecycle.
-  - `workflowPersistenceStore.ts`: autosave, import/export, restore.
-  - `workflowExecutionStore.ts`: runtime execution log + node execution states.
-- `src/engine/`
-  - `workflowEngine.ts`: validation rules, DAG build, execution loop.
-  - `executors/*`: specialized execution strategies.
-- `src/registry/nodeRegistry.ts`
+- [`src/components/`](src/components/)
+  - [`WorkFlowCanvas.vue`](src/components/WorkFlowCanvas.vue): drag/drop, connect, node/edge change streams.
+  - [`nodeRenderers/*`](src/components/nodeRenderers/): node visual contracts per type.
+  - [`edgeRenderers/*`](src/components/edgeRenderers/): edge-level controls (for example delete edge interaction).
+- [`src/stores/`](src/stores/)
+  - [`workflowGraphStore.ts`](src/stores/workflowGraphStore.ts): graph domain state + normalized indexes.
+  - [`workflowHistoryStore.ts`](src/stores/workflowHistoryStore.ts): command history, undo/redo lifecycle.
+  - [`workflowPersistenceStore.ts`](src/stores/workflowPersistenceStore.ts): autosave, import/export, restore.
+  - [`workflowExecutionStore.ts`](src/stores/workflowExecutionStore.ts): runtime execution log + node execution states.
+- [`src/engine/`](src/engine/)
+  - [`workflowEngine.ts`](src/engine/workflowEngine.ts): validation rules, DAG build, execution loop.
+  - [`executors/*`](src/engine/executors/): specialized execution strategies.
+- [`src/registry/nodeRegistry.ts`](src/registry/nodeRegistry.ts)
   - node definitions, config schema, `executorResolver`, optional `portResolver`.
-- `src/factory/workNodeFactory.ts`
+- [`src/factory/workNodeFactory.ts`](src/factory/workNodeFactory.ts)
   - creates work nodes from registry definitions.
-- `src/config/workflowConstants.ts`
+- [`src/config/workflowConstants.ts`](src/config/workflowConstants.ts)
   - centralized limits and policy flags.
 
 # UI Component Design and Minimal Design System
@@ -98,9 +98,9 @@ flowchart TB
 
 Component boundaries:
 
-- `WorkFlowCanvas` handles canvas-level interactions (drag/drop, connect, selection, and change streams).
+- [`WorkFlowCanvas`](src/components/WorkFlowCanvas.vue) handles canvas-level interactions (drag/drop, connect, selection, and change streams).
 - Node renderers handle node-specific visuals and interactions.
-- `DeletableEdgeRenderer` handles edge-local actions.
+- [`DeletableEdgeRenderer`](src/components/edgeRenderers/DeletableEdgeRenderer.vue) handles edge-local actions.
 - Configuration UI handles schema-driven editing of node config.
 - Execution log UI handles runtime visibility and error feedback.
 
@@ -146,6 +146,14 @@ sequenceDiagram
   Engine->>Graph: executionLogAndNodeStateMap
 ```
 
+Runtime flow function links:
+
+- [`getNodeDefinition(type)`](src/registry/nodeRegistry.ts)
+- [`createWorkNode(id, definition)`](src/factory/workNodeFactory.ts)
+- [`addNode(renderWorkNode)`](src/stores/workflowGraphStore.ts)
+- [`executeWorkflow(nodes, edges)`](src/engine/workflowEngine.ts)
+- [`getExecutor().execute()`](src/factory/workNodeFactory.ts)
+
 ### How node generation works
 
 Node generation follows a small pipeline:
@@ -161,10 +169,10 @@ Node generation follows a small pipeline:
 
 To add a new node type, you usually only touch four places:
 
-1. Register the node definition in `src/registry/nodeRegistry.ts`.
-2. Implement executor behavior in `src/engine/executors/`.
-3. Add a node renderer in `src/components/nodeRenderers/`.
-4. Wire the renderer slot in `src/components/WorkFlowCanvas.vue`.
+1. Register the node definition in [`src/registry/nodeRegistry.ts`](src/registry/nodeRegistry.ts).
+2. Implement executor behavior in [`src/engine/executors/`](src/engine/executors/).
+3. Add a node renderer in [`src/components/nodeRenderers/`](src/components/nodeRenderers/).
+4. Wire the renderer slot in [`src/components/WorkFlowCanvas.vue`](src/components/WorkFlowCanvas.vue).
 
 Pros and cons:
 
@@ -175,10 +183,10 @@ Pros and cons:
 
 State is split across Pinia stores by responsibility:
 
-- `workflowGraphStore`: graph nodes/edges, adjacency indexes, selection, and graph mutation primitives.
-- `workflowHistoryStore`: command history lifecycle (`run`, `undo`, `redo`) with bounded depth.
-- `workflowPersistenceStore`: autosave scheduling, import/export, and restore from local storage.
-- `workflowExecutionStore`: execution lifecycle, execution logs, and per-node execution status.
+- [`workflowGraphStore`](src/stores/workflowGraphStore.ts): graph nodes/edges, adjacency indexes, selection, and graph mutation primitives.
+- [`workflowHistoryStore`](src/stores/workflowHistoryStore.ts): command history lifecycle ([`run`](src/stores/helpers/workflowCommandHistory.ts), [`undo`](src/stores/helpers/workflowCommandHistory.ts), [`redo`](src/stores/helpers/workflowCommandHistory.ts)) with bounded depth.
+- [`workflowPersistenceStore`](src/stores/workflowPersistenceStore.ts): autosave scheduling, import/export, and restore from local storage.
+- [`workflowExecutionStore`](src/stores/workflowExecutionStore.ts): execution lifecycle, execution logs, and per-node execution status.
 
 Interaction shape:
 
@@ -200,14 +208,14 @@ Why this matters:
 
 - Node/edge lookup and incident-edge operations stay fast (O(1) style lookups).
 - Dynamic port changes can remove only invalid affected edges instead of filtering every edge.
-- `splice` updates preserve top-level array identity, which aligns better with Vue Flow change streams (`applyNodeChanges`, `applyEdgeChanges`).
+- `splice` updates preserve top-level array identity, which aligns better with Vue Flow change streams ([`applyNodeChanges`](src/stores/workflowGraphStore.ts), [`applyEdgeChanges`](src/stores/workflowGraphStore.ts)).
 
 Pros and cons of this approach:
 
 - ✅ Pros: better scaling behavior for dense workflows and lower reactive fan-out.
 - ⚠️ Cons: more index consistency rules to maintain (handled by graph consistency assertions in development).
 
-Hard limits and policy flags are centralized in `src/config/workflowConstants.ts` (for example `MAX_EXECUTION_STEPS`, autosave debounce, undo/redo depth, zoom bounds, and edge validation toggle).
+Hard limits and policy flags are centralized in [`src/config/workflowConstants.ts`](src/config/workflowConstants.ts) (for example `MAX_EXECUTION_STEPS`, autosave debounce, undo/redo depth, zoom bounds, and edge validation toggle).
 
 ## Code Quality
 
