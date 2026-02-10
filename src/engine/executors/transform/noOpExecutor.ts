@@ -1,6 +1,7 @@
 import type { NodeExecutor } from '../nodeExecutor'
 import type { WorkflowContext } from '../../workflowContext'
 import type { OutputPortDefinition } from '../../../models/ports'
+import { requirePrimaryOutputPort } from './transformExecutorValidationPolicy'
 
 export class NoOpExecutor implements NodeExecutor {
   execute(
@@ -8,6 +9,6 @@ export class NoOpExecutor implements NodeExecutor {
     _config: Record<string, unknown>,
     outputPorts: OutputPortDefinition[],
   ): OutputPortDefinition | null {
-    return outputPorts[0] ?? null
+    return requirePrimaryOutputPort(outputPorts, 'No-op executor')
   }
 }

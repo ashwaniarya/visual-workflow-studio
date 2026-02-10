@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { Edge } from '@vue-flow/core'
 import type { RenderWorkNode } from '../models/renderWorkNode'
 import type { ExecutionLogEntry } from '../models/executionLog'
+import type { NodeExecutionStateMap } from '../engine/nodeExecutionState'
 import { getNodeDefinition, getAllNodeDefinitions } from '../registry/nodeRegistry'
 import { canConnect, executeWorkflow } from '../engine/workflowEngine'
 import { WorkNodeSerialization } from '../serialization/workNodeSerialization'
@@ -16,6 +17,7 @@ interface WorkflowCanvasState {
   selectedNodeId: string | null
   executionLog: ExecutionLogEntry[]
   isExecuting: boolean
+  nodeExecutionStateMap: NodeExecutionStateMap
 }
 
 // ─── Store Definition ────────────────────────────────────────────────
@@ -27,6 +29,7 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
     selectedNodeId: null,
     executionLog: [],
     isExecuting: false,
+    nodeExecutionStateMap: new Map(),
   }),
 
   getters: {
@@ -95,6 +98,7 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
         this.edges,
       )
       if (isValid) {
+        edge.type = 'DELETABLE'
         this.edges.push(edge)
       }
     },
@@ -110,8 +114,11 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
     runWorkflow() {
       this.isExecuting = true
       this.executionLog = []
+      this.nodeExecutionStateMap = new Map()
       try {
-        this.executionLog = executeWorkflow(this.nodes, this.edges)
+        const result = executeWorkflow(this.nodes, this.edges)
+        this.executionLog = result.executionLog
+        this.nodeExecutionStateMap = result.nodeExecutionStateMap
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
         this.executionLog = [
@@ -136,6 +143,7 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
 
     clearExecutionLog() {
       this.executionLog = []
+      this.nodeExecutionStateMap = new Map()
     },
 
     exportWorkflow(): string {

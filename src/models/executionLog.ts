@@ -1,3 +1,5 @@
+import type { ExecutionErrorCode } from '../engine/errors/nodeExecutionError'
+
 export interface ExecutionLogEntry {
   stepNumber: number
   nodeId: string
@@ -9,5 +11,6 @@ export interface ExecutionLogEntry {
   nextNodeId: string | null
   status: 'success' | 'error'
   errorMessage?: string
+  errorCode?: ExecutionErrorCode
   timestamp: number
 }

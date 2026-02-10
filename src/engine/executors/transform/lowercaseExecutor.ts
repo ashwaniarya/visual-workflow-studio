@@ -1,6 +1,11 @@
 import type { NodeExecutor } from '../nodeExecutor'
 import type { WorkflowContext } from '../../workflowContext'
 import type { OutputPortDefinition } from '../../../models/ports'
+import {
+  requirePrimaryOutputPort,
+  requireStringPayloadField,
+  requireTargetField,
+} from './transformExecutorValidationPolicy'
 
 export class LowercaseExecutor implements NodeExecutor {
   execute(
@@ -8,11 +13,12 @@ export class LowercaseExecutor implements NodeExecutor {
     config: Record<string, unknown>,
     outputPorts: OutputPortDefinition[],
   ): OutputPortDefinition | null {
-    const targetField = config.targetField as string
-    const currentValue = context.payload[targetField]
-    if (typeof currentValue === 'string') {
-      context.payload[targetField] = currentValue.toLowerCase()
-    }
-    return outputPorts[0] ?? null
+    const executorLabel = 'Lowercase executor'
+    const selectedOutputPort = requirePrimaryOutputPort(outputPorts, executorLabel)
+    const targetField = requireTargetField(config, executorLabel)
+    const currentValue = requireStringPayloadField(context, targetField, executorLabel)
+
+    context.payload[targetField] = currentValue.toLowerCase()
+    return selectedOutputPort
   }
 }

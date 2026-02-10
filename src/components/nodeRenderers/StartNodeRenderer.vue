@@ -1,23 +1,37 @@
 <script setup lang="ts">
-import type { PortDefinition } from '../../models/ports'
-import DynamicHandleRenderer from './DynamicHandleRenderer.vue'
+import type { PortDefinition } from "../../models/ports";
+import DynamicHandleRenderer from "./DynamicHandleRenderer.vue";
+import NodeRendererWrapper from "./NodeRendererWrapper.vue";
+import { useNodeExecutionState } from "../../composables/useNodeExecutionState";
 
-defineProps<{
+const props = defineProps<{
+  id: string;
   data: {
-    workNode: { type: string; config: Record<string, unknown> }
-    portDefinition: PortDefinition
-  }
-}>()
+    workNode: { type: string; config: Record<string, unknown> };
+    portDefinition: PortDefinition;
+  };
+}>();
+
+const { executionCssClass, executionErrorMessage } = useNodeExecutionState(
+  props.id,
+);
 </script>
 
 <template>
-  <div class="node-renderer node-start">
-    <div class="node-header">▶ Start</div>
-    <div class="node-body">
-      <span class="node-preview">{{ JSON.stringify(data.workNode.config.inputPayload).slice(0, 30) }}</span>
+  <NodeRendererWrapper :nodeId="id">
+    <div class="node-renderer node-start" :class="executionCssClass">
+      <div class="node-header">▶ Start</div>
+      <div class="node-body">
+        <span class="node-preview">{{
+          JSON.stringify(data.workNode.config.inputPayload).slice(0, 30)
+        }}</span>
+      </div>
+      <div v-if="executionErrorMessage" class="node-error-banner">
+        ⚠️ {{ executionErrorMessage }}
+      </div>
+      <DynamicHandleRenderer :portDefinition="data.portDefinition" />
     </div>
-    <DynamicHandleRenderer :portDefinition="data.portDefinition" />
-  </div>
+  </NodeRendererWrapper>
 </template>
 
 <style scoped>

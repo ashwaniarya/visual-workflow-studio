@@ -1,28 +1,43 @@
 <script setup lang="ts">
-import type { PortDefinition } from '../../models/ports'
-import DynamicHandleRenderer from './DynamicHandleRenderer.vue'
+import type { PortDefinition } from "../../models/ports";
+import DynamicHandleRenderer from "./DynamicHandleRenderer.vue";
+import NodeRendererWrapper from "./NodeRendererWrapper.vue";
+import { useNodeExecutionState } from "../../composables/useNodeExecutionState";
 
 const props = defineProps<{
+  id: string;
   data: {
-    workNode: { type: string; config: Record<string, unknown> }
-    portDefinition: PortDefinition
-  }
-}>()
+    workNode: { type: string; config: Record<string, unknown> };
+    portDefinition: PortDefinition;
+  };
+}>();
+
+const { executionCssClass, executionErrorMessage } = useNodeExecutionState(
+  props.id,
+);
 
 function caseCount(): number {
-  const cases = props.data.workNode.config.cases as unknown[]
-  return Array.isArray(cases) ? cases.length : 0
+  const cases = props.data.workNode.config.cases as unknown[];
+  return Array.isArray(cases) ? cases.length : 0;
 }
 </script>
 
 <template>
-  <div class="node-renderer node-switch">
-    <div class="node-header">🔀 Switch</div>
-    <div class="node-body">
-      <span class="node-preview">{{ data.workNode.config.targetField || '—' }} · {{ caseCount() }} cases</span>
+  <NodeRendererWrapper :nodeId="id">
+    <div class="node-renderer node-switch" :class="executionCssClass">
+      <div class="node-header">🔀 Switch</div>
+      <div class="node-body">
+        <span class="node-preview"
+          >{{ data.workNode.config.targetField || "—" }} ·
+          {{ caseCount() }} cases</span
+        >
+      </div>
+      <div v-if="executionErrorMessage" class="node-error-banner">
+        ⚠️ {{ executionErrorMessage }}
+      </div>
+      <DynamicHandleRenderer :portDefinition="data.portDefinition" />
     </div>
-    <DynamicHandleRenderer :portDefinition="data.portDefinition" />
-  </div>
+  </NodeRendererWrapper>
 </template>
 
 <style scoped>

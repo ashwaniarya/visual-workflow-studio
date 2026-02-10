@@ -31,6 +31,30 @@ html, body, #app {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
+/* ─── Execution State Visual Feedback ────────────────────────────── */
+
+.node-execution-error {
+  border-color: #f38ba8 !important;
+  box-shadow: 0 0 12px rgba(243, 139, 168, 0.4);
+}
+
+.node-execution-success {
+  border-color: #a6e3a1 !important;
+  box-shadow: 0 0 10px rgba(166, 227, 161, 0.25);
+}
+
+.node-error-banner {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(243, 139, 168, 0.15);
+  border: 1px solid rgba(243, 139, 168, 0.3);
+  border-radius: 4px;
+  font-size: 10px;
+  color: #f38ba8;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
 .node-header {
   font-size: 12px;
   font-weight: 700;

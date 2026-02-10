@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { SwitchNodeExecutor } from './switchNodeExecutor'
+import { NodeExecutionError, ExecutionErrorCode } from '../../errors/nodeExecutionError'
 import type { WorkflowContext } from '../../workflowContext'
 import type { OutputPortDefinition } from '../../../models/ports'
 
@@ -95,20 +96,7 @@ describe('SwitchNodeExecutor', () => {
     expect(result).toEqual({ id: 'default', label: 'Default' })
   })
 
-  it('🕳️ returns null when no case matches and no default port exists', () => {
-    const context = buildContext({ status: 'unknown' })
-    const config = {
-      targetField: 'status',
-      cases: [{ label: 'Active', operator: '==', value: 'active' }],
-    }
-    const ports = buildPorts(1, false) // no default port
-
-    const result = executor.execute(context, config, ports)
-
-    expect(result).toBeNull()
-  })
-
-  // ── Empty / missing cases ───────────────────────────────────────
+  // ── Empty / missing cases → default ───────────────────────────
 
   it('📭 falls back to default when cases array is empty', () => {
     const context = buildContext({ status: 'active' })
@@ -130,7 +118,7 @@ describe('SwitchNodeExecutor', () => {
     expect(result).toEqual({ id: 'default', label: 'Default' })
   })
 
-  // ── Operator variety ────────────────────────────────────────────
+  // ── Operator variety ──────────────────────────────────────────
 
   it('🔢 matches with > operator (numeric comparison)', () => {
     const context = buildContext({ age: 25 })
@@ -197,9 +185,37 @@ describe('SwitchNodeExecutor', () => {
     expect(result).toEqual({ id: 'case-0', label: 'Case 0' })
   })
 
-  // ── Edge: missing targetField in payload ────────────────────────
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🛡️ Guard — MISSING_CONFIG_FIELD
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  it('⚠️ falls back to default when targetField is absent from payload', () => {
+  it('💥 throws MISSING_CONFIG_FIELD when targetField is undefined', () => {
+    const context = buildContext({ status: 'active' })
+    const config = { cases: [{ label: 'A', operator: '==', value: 'x' }] }
+    const ports = buildPorts(1)
+
+    expect(() => executor.execute(context, config, ports)).toThrowError(NodeExecutionError)
+    try {
+      executor.execute(context, config, ports)
+    } catch (error) {
+      expect(error).toBeInstanceOf(NodeExecutionError)
+      expect((error as NodeExecutionError).errorCode).toBe(ExecutionErrorCode.MISSING_CONFIG_FIELD)
+    }
+  })
+
+  it('💥 throws MISSING_CONFIG_FIELD when targetField is empty string', () => {
+    const context = buildContext({ status: 'active' })
+    const config = { targetField: '', cases: [] }
+    const ports = buildPorts(0)
+
+    expect(() => executor.execute(context, config, ports)).toThrowError(NodeExecutionError)
+  })
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🛡️ Guard — MISSING_PAYLOAD_FIELD
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  it('💥 throws MISSING_PAYLOAD_FIELD when targetField absent from payload', () => {
     const context = buildContext({}) // no "status" key
     const config = {
       targetField: 'status',
@@ -207,14 +223,39 @@ describe('SwitchNodeExecutor', () => {
     }
     const ports = buildPorts(1)
 
-    const result = executor.execute(context, config, ports)
-
-    expect(result).toEqual({ id: 'default', label: 'Default' })
+    expect(() => executor.execute(context, config, ports)).toThrowError(NodeExecutionError)
+    try {
+      executor.execute(context, config, ports)
+    } catch (error) {
+      expect((error as NodeExecutionError).errorCode).toBe(ExecutionErrorCode.MISSING_PAYLOAD_FIELD)
+    }
   })
 
-  // ── Edge: port missing for a matching case ──────────────────────
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🛡️ Guard — INVALID_OPERATOR
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  it('⚠️ returns null when matching case index has no corresponding port', () => {
+  it('💥 throws INVALID_OPERATOR when case uses unsupported operator', () => {
+    const context = buildContext({ score: 50 })
+    const config = {
+      targetField: 'score',
+      cases: [{ label: 'Bad Op', operator: 'LIKE', value: '50' }],
+    }
+    const ports = buildPorts(1)
+
+    expect(() => executor.execute(context, config, ports)).toThrowError(NodeExecutionError)
+    try {
+      executor.execute(context, config, ports)
+    } catch (error) {
+      expect((error as NodeExecutionError).errorCode).toBe(ExecutionErrorCode.INVALID_OPERATOR)
+    }
+  })
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🛡️ Guard — PORT_NOT_FOUND (matching case port missing)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  it('💥 throws PORT_NOT_FOUND when matching case has no corresponding port', () => {
     const context = buildContext({ status: 'active' })
     const config = {
       targetField: 'status',
@@ -226,8 +267,31 @@ describe('SwitchNodeExecutor', () => {
       { id: 'default', label: 'Default' },
     ]
 
-    const result = executor.execute(context, config, ports)
+    expect(() => executor.execute(context, config, ports)).toThrowError(NodeExecutionError)
+    try {
+      executor.execute(context, config, ports)
+    } catch (error) {
+      expect((error as NodeExecutionError).errorCode).toBe(ExecutionErrorCode.PORT_NOT_FOUND)
+    }
+  })
 
-    expect(result).toBeNull()
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🛡️ Guard — PORT_NOT_FOUND (no default when nothing matches)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  it('💥 throws PORT_NOT_FOUND when no case matches and default port is missing', () => {
+    const context = buildContext({ status: 'unknown' })
+    const config = {
+      targetField: 'status',
+      cases: [{ label: 'Active', operator: '==', value: 'active' }],
+    }
+    const ports = buildPorts(1, false) // no default port
+
+    expect(() => executor.execute(context, config, ports)).toThrowError(NodeExecutionError)
+    try {
+      executor.execute(context, config, ports)
+    } catch (error) {
+      expect((error as NodeExecutionError).errorCode).toBe(ExecutionErrorCode.PORT_NOT_FOUND)
+    }
   })
 })

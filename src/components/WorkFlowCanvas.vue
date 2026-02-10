@@ -15,6 +15,7 @@ import TransformNodeRenderer from "./nodeRenderers/TransformNodeRenderer.vue";
 import DecisionNodeRenderer from "./nodeRenderers/DecisionNodeRenderer.vue";
 import SwitchNodeRenderer from "./nodeRenderers/SwitchNodeRenderer.vue";
 import EndNodeRenderer from "./nodeRenderers/EndNodeRenderer.vue";
+import DeletableEdgeRenderer from "./edgeRenderers/DeletableEdgeRenderer.vue";
 
 const workflowStore = useWorkflowCanvasStore();
 const { onConnect, onNodeClick, onNodeDragStop, project } = useVueFlow({
@@ -133,6 +134,10 @@ function onPaneClick() {
       </template>
       <template #node-END="nodeProps">
         <EndNodeRenderer v-bind="nodeProps" />
+      </template>
+
+      <template #edge-DELETABLE="edgeProps">
+        <DeletableEdgeRenderer v-bind="edgeProps" />
       </template>
 
       <Background />

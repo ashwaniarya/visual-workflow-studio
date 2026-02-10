@@ -1,6 +1,12 @@
 import type { NodeExecutor } from '../nodeExecutor'
 import type { WorkflowContext } from '../../workflowContext'
 import type { OutputPortDefinition } from '../../../models/ports'
+import {
+  requirePrimaryOutputPort,
+  requireStringOperand,
+  requireStringPayloadField,
+  requireTargetField,
+} from './transformExecutorValidationPolicy'
 
 export class AppendExecutor implements NodeExecutor {
   execute(
@@ -8,12 +14,13 @@ export class AppendExecutor implements NodeExecutor {
     config: Record<string, unknown>,
     outputPorts: OutputPortDefinition[],
   ): OutputPortDefinition | null {
-    const targetField = config.targetField as string
-    const operand = config.operand as string
-    const currentValue = context.payload[targetField]
-    if (typeof currentValue === 'string') {
-      context.payload[targetField] = currentValue + operand
-    }
-    return outputPorts[0] ?? null
+    const executorLabel = 'Append executor'
+    const selectedOutputPort = requirePrimaryOutputPort(outputPorts, executorLabel)
+    const targetField = requireTargetField(config, executorLabel)
+    const operand = requireStringOperand(config, executorLabel)
+    const currentValue = requireStringPayloadField(context, targetField, executorLabel)
+
+    context.payload[targetField] = currentValue + operand
+    return selectedOutputPort
   }
 }

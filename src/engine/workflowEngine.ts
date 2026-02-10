@@ -4,6 +4,8 @@ import type { ExecutionLogEntry } from '../models/executionLog'
 import type { WorkflowContext } from './workflowContext'
 import type { OutputPortDefinition } from '../models/ports'
 import type { NodeExecutor } from './executors/nodeExecutor'
+import type { WorkflowExecutionResult, NodeExecutionStateMap } from './nodeExecutionState'
+import { NodeExecutionError } from './errors/nodeExecutionError'
 import { getNodeDefinition } from '../registry/nodeRegistry'
 import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
 
@@ -129,8 +131,9 @@ export function buildWorkflow(
 export function executeWorkflow(
   nodes: RenderWorkNode[],
   edges: Edge[],
-): ExecutionLogEntry[] {
+): WorkflowExecutionResult {
   const adjacency = buildWorkflow(nodes, edges)
+  const nodeExecutionStateMap: NodeExecutionStateMap = new Map()
 
   // Find the start node
   const startNode = nodes.find((n) => n.data?.workNode?.type === 'START')
@@ -171,6 +174,7 @@ export function executeWorkflow(
     let selectedPort: OutputPortDefinition | null = null
     let executionStatus: 'success' | 'error' = 'success'
     let errorMessage: string | undefined
+    let errorCode: import('./errors/nodeExecutionError').ExecutionErrorCode | undefined
 
     try {
       selectedPort = executor.execute(
@@ -183,7 +187,18 @@ export function executeWorkflow(
       errorMessage = executionError instanceof Error
         ? executionError.message
         : String(executionError)
+
+      if (executionError instanceof NodeExecutionError) {
+        errorCode = executionError.errorCode
+      }
     }
+
+    // Record per-node execution state
+    nodeExecutionStateMap.set(currentNode.id, {
+      status: executionStatus,
+      errorMessage,
+      errorCode,
+    })
 
     // Determine next node
     let nextNodeId: string | null = null
@@ -207,6 +222,7 @@ export function executeWorkflow(
       nextNodeId,
       status: executionStatus,
       errorMessage,
+      errorCode,
       timestamp: Date.now(),
     }
     context.executionLog.push(logEntry)
@@ -224,5 +240,8 @@ export function executeWorkflow(
     }
   }
 
-  return context.executionLog
+  return {
+    executionLog: context.executionLog,
+    nodeExecutionStateMap,
+  }
 }
