@@ -1,0 +1,146 @@
+<script setup lang="ts">
+import { VueFlow, useVueFlow } from "@vue-flow/core";
+import { Background } from "@vue-flow/background";
+import { Controls } from "@vue-flow/controls";
+import { useWorkflowCanvasStore } from "../stores/workflowCanvasStore";
+import { getNodeDefinition } from "../registry/nodeRegistry";
+import { createWorkNode } from "../factory/workNodeFactory";
+import type { RenderWorkNode } from "../models/renderWorkNode";
+import type { Connection, Edge } from "@vue-flow/core";
+import { canConnect } from "../engine/workflowEngine";
+import { WORKFLOW_CONSTANTS } from "../config/workflowConstants";
+
+import StartNodeRenderer from "./nodeRenderers/StartNodeRenderer.vue";
+import TransformNodeRenderer from "./nodeRenderers/TransformNodeRenderer.vue";
+import DecisionNodeRenderer from "./nodeRenderers/DecisionNodeRenderer.vue";
+import EndNodeRenderer from "./nodeRenderers/EndNodeRenderer.vue";
+
+const workflowStore = useWorkflowCanvasStore();
+const { onConnect, onNodeClick, onNodeDragStop, project } = useVueFlow({
+  nodes: workflowStore.nodes,
+  edges: workflowStore.edges,
+  minZoom: WORKFLOW_CONSTANTS.MIN_ZOOM,
+  maxZoom: WORKFLOW_CONSTANTS.MAX_ZOOM,
+  defaultZoom: WORKFLOW_CONSTANTS.DEFAULT_CANVAS_ZOOM,
+});
+
+let nodeIdCounter = 0;
+
+function generateNodeId(): string {
+  nodeIdCounter++;
+  return `node-${Date.now()}-${nodeIdCounter}`;
+}
+
+// ─── Drop handler ────────────────────────────────────────────────────
+
+function onDragOver(event: DragEvent) {
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move";
+  }
+}
+
+function onDrop(event: DragEvent) {
+  event.preventDefault();
+  const nodeType = event.dataTransfer?.getData(
+    "application/workflow-node-type",
+  );
+  if (!nodeType) return;
+
+  const definition = getNodeDefinition(nodeType);
+  const newId = generateNodeId();
+  const workNode = createWorkNode(newId, definition);
+
+  const canvasElement = (
+    event.currentTarget as HTMLElement
+  )?.getBoundingClientRect();
+  const position = project({
+    x: event.clientX - canvasElement.left,
+    y: event.clientY - canvasElement.top,
+  });
+
+  const renderNode: RenderWorkNode = {
+    id: newId,
+    type: nodeType,
+    position: { x: position.x, y: position.y },
+    data: { workNode },
+  };
+
+  workflowStore.addNode(renderNode);
+}
+
+// ─── Connection handler ──────────────────────────────────────────────
+
+onConnect((connection: Connection) => {
+  const isValid = canConnect(
+    connection.source,
+    connection.sourceHandle ?? "out-0",
+    connection.target,
+    workflowStore.nodes,
+    workflowStore.edges,
+  );
+  if (!isValid) return;
+
+  const edge: Edge = {
+    id: `edge-${connection.source}-${connection.sourceHandle}-${connection.target}`,
+    source: connection.source,
+    target: connection.target,
+    sourceHandle: connection.sourceHandle,
+    animated: true,
+  };
+  workflowStore.addEdge(edge);
+});
+
+// ─── Node drag stop handler ──────────────────────────────────────────
+
+onNodeDragStop(({ node }) => {
+  workflowStore.updatePositionOfNodeById(node.id, {
+    x: node.position.x,
+    y: node.position.y,
+  });
+});
+
+// ─── Node click handler ─────────────────────────────────────────────
+
+onNodeClick(({ node }) => {
+  workflowStore.setSelectedNode(node.id);
+});
+
+function onPaneClick() {
+  workflowStore.setSelectedNode(null);
+}
+</script>
+
+<template>
+  <div class="workflow-canvas" @dragover="onDragOver" @drop="onDrop">
+    <VueFlow
+      :nodes="workflowStore.nodes"
+      :edges="workflowStore.edges"
+      @pane-click="onPaneClick"
+    >
+      <template #node-START="nodeProps">
+        <StartNodeRenderer v-bind="nodeProps" />
+      </template>
+      <template #node-TRANSFORM="nodeProps">
+        <TransformNodeRenderer v-bind="nodeProps" />
+      </template>
+      <template #node-DECISION="nodeProps">
+        <DecisionNodeRenderer v-bind="nodeProps" />
+      </template>
+      <template #node-END="nodeProps">
+        <EndNodeRenderer v-bind="nodeProps" />
+      </template>
+
+      <Background />
+      <Controls />
+    </VueFlow>
+  </div>
+</template>
+
+<style scoped>
+.workflow-canvas {
+  flex: 1;
+  height: 100%;
+  position: relative;
+}
+</style>
