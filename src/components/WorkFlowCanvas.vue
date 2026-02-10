@@ -2,11 +2,12 @@
 import { VueFlow, useVueFlow } from "@vue-flow/core";
 import { Background } from "@vue-flow/background";
 import { Controls } from "@vue-flow/controls";
+import { computed } from "vue";
 import { useWorkflowGraphStore } from "../stores/workflowGraphStore";
 import { getNodeDefinition } from "../registry/nodeRegistry";
 import { createWorkNode } from "../factory/workNodeFactory";
 import type { RenderWorkNode } from "../models/renderWorkNode";
-import type { Connection, Edge, EdgeChange, NodeChange } from "@vue-flow/core";
+import type { Connection, Edge, EdgeChange, Node as VueFlowNode, NodeChange } from "@vue-flow/core";
 import { canConnect } from "../engine/workflowEngine";
 import { WORKFLOW_CONSTANTS } from "../config/workflowConstants";
 
@@ -19,14 +20,10 @@ import DeletableEdgeRenderer from "./edgeRenderers/DeletableEdgeRenderer.vue";
 import WorkflowMiniMapPanel from "./WorkflowMiniMapPanel.vue";
 
 const workflowGraphStore = useWorkflowGraphStore();
+const canvasNodes = computed<VueFlowNode[]>(() => [...workflowGraphStore.nodes]);
+const canvasEdges = computed<Edge[]>(() => [...workflowGraphStore.edges]);
 const { onConnect, onNodeClick, onNodesChange, onEdgesChange, project } =
-  useVueFlow({
-    nodes: workflowGraphStore.nodes,
-    edges: workflowGraphStore.edges,
-    minZoom: WORKFLOW_CONSTANTS.MIN_ZOOM,
-    maxZoom: WORKFLOW_CONSTANTS.MAX_ZOOM,
-    defaultZoom: WORKFLOW_CONSTANTS.DEFAULT_CANVAS_ZOOM,
-  });
+  useVueFlow();
 
 let nodeIdCounter = 0;
 
@@ -116,8 +113,11 @@ function onPaneClick() {
 <template>
   <div class="workflow-canvas" @dragover="onDragOver" @drop="onDrop">
     <VueFlow
-      :nodes="workflowGraphStore.nodes"
-      :edges="workflowGraphStore.edges"
+      :nodes="canvasNodes"
+      :edges="canvasEdges"
+      :min-zoom="WORKFLOW_CONSTANTS.MIN_ZOOM"
+      :max-zoom="WORKFLOW_CONSTANTS.MAX_ZOOM"
+      :default-zoom="WORKFLOW_CONSTANTS.DEFAULT_CANVAS_ZOOM"
       @pane-click="onPaneClick"
     >
       <template #node-START="nodeProps">

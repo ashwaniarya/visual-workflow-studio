@@ -2,14 +2,16 @@
 // Centralised enum of every typed failure an executor can report.
 // Engine & UI layers consume these to decide severity and display.
 
-export enum ExecutionErrorCode {
-  MISSING_CONFIG_FIELD = 'MISSING_CONFIG_FIELD',
-  MISSING_PAYLOAD_FIELD = 'MISSING_PAYLOAD_FIELD',
-  PORT_NOT_FOUND = 'PORT_NOT_FOUND',
-  INVALID_OPERATOR = 'INVALID_OPERATOR',
-  INVALID_CONFIG_VALUE = 'INVALID_CONFIG_VALUE',
-  NO_OUTPUT_PORT = 'NO_OUTPUT_PORT',
-}
+export const ExecutionErrorCode = {
+  MISSING_CONFIG_FIELD: 'MISSING_CONFIG_FIELD',
+  MISSING_PAYLOAD_FIELD: 'MISSING_PAYLOAD_FIELD',
+  PORT_NOT_FOUND: 'PORT_NOT_FOUND',
+  INVALID_OPERATOR: 'INVALID_OPERATOR',
+  INVALID_CONFIG_VALUE: 'INVALID_CONFIG_VALUE',
+  NO_OUTPUT_PORT: 'NO_OUTPUT_PORT',
+} as const
+
+export type ExecutionErrorCode = (typeof ExecutionErrorCode)[keyof typeof ExecutionErrorCode]
 
 // ─── Custom Error ────────────────────────────────────────────────────
 // Thrown by executors when a recoverable user-configuration problem is
@@ -17,11 +19,14 @@ export enum ExecutionErrorCode {
 // execution log with both errorCode + human-readable message.
 
 export class NodeExecutionError extends Error {
+  public readonly errorCode: ExecutionErrorCode
+
   constructor(
-    public readonly errorCode: ExecutionErrorCode,
+    errorCode: ExecutionErrorCode,
     message: string,
   ) {
     super(message)
+    this.errorCode = errorCode
     this.name = 'NodeExecutionError'
   }
 }
