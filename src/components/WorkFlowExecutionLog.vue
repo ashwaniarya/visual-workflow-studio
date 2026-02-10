@@ -18,7 +18,7 @@ function clearLog() {
 }
 
 function formatPayload(payload: Record<string, unknown>): string {
-  return JSON.stringify(payload, null, 2);
+  return JSON.stringify(payload);
 }
 </script>
 
@@ -59,7 +59,7 @@ function formatPayload(payload: Record<string, unknown>): string {
           :key="entry.stepNumber"
           as="div"
           variant="outlined"
-          padding="medium"
+          padding="small"
           class="log-entry"
           :class="{ 'log-error': entry.status === 'error' }"
         >
@@ -72,13 +72,15 @@ function formatPayload(payload: Record<string, unknown>): string {
           </div>
 
           <div class="log-entry-body">
-            <div class="log-payload">
-              <span class="log-label">In:</span>
-              <code>{{ formatPayload(entry.inputPayload) }}</code>
-            </div>
-            <div class="log-payload">
-              <span class="log-label">Out:</span>
-              <code>{{ formatPayload(entry.outputPayload) }}</code>
+            <div class="log-payload-row">
+              <div class="log-payload log-payload--left">
+                <span class="log-label">In:</span>
+                <code>{{ formatPayload(entry.inputPayload) }}</code>
+              </div>
+              <div class="log-payload log-payload--right">
+                <span class="log-label">Out:</span>
+                <code>{{ formatPayload(entry.outputPayload) }}</code>
+              </div>
             </div>
             <div v-if="entry.selectedPortId" class="log-port">
               → Port: <strong>{{ entry.selectedPortId }}</strong>
@@ -98,7 +100,7 @@ function formatPayload(payload: Record<string, unknown>): string {
 
 <style scoped>
 .execution-log-panel {
-  height: 250px;
+  height: 190px;
   background: var(--color-surface-primary);
   border-top: 1px solid var(--color-border-default);
   display: flex;
@@ -109,7 +111,7 @@ function formatPayload(payload: Record<string, unknown>): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border-default);
 }
 
@@ -121,7 +123,7 @@ function formatPayload(payload: Record<string, unknown>): string {
 .log-body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-1) var(--space-2);
 }
 
 .log-empty {
@@ -134,7 +136,7 @@ function formatPayload(payload: Record<string, unknown>): string {
 }
 
 .log-entry {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .log-entry.log-error {
@@ -144,8 +146,8 @@ function formatPayload(payload: Record<string, unknown>): string {
 .log-entry-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: 6px;
+  margin-bottom: 2px;
 }
 
 .log-step {
@@ -178,32 +180,55 @@ function formatPayload(payload: Record<string, unknown>): string {
 
 .log-entry-body {
   font-size: var(--font-size-body-small);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.log-payload-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .log-payload {
   display: flex;
-  gap: 6px;
-  margin-bottom: 2px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.log-payload--left {
+  flex: 1;
+}
+
+.log-payload--right {
+  flex: 1;
+  justify-content: flex-end;
+  text-align: right;
 }
 
 .log-label {
   color: var(--color-text-muted);
   font-weight: var(--font-weight-semibold);
-  min-width: 30px;
+  min-width: 26px;
 }
 
 .log-payload code {
   color: var(--color-text-primary);
   font-family: var(--font-family-monospace);
   font-size: var(--font-size-body-small);
-  white-space: pre-wrap;
+  white-space: nowrap;
   word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .log-port {
   color: var(--color-text-muted);
   font-size: var(--font-size-body-small);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .log-port strong {
@@ -213,12 +238,12 @@ function formatPayload(payload: Record<string, unknown>): string {
 .log-error-message {
   color: var(--color-danger-primary);
   font-size: var(--font-size-body-small);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 @media (max-width: 767px) {
   .execution-log-panel {
-    height: 200px;
+    height: 170px;
   }
 
   .log-header {
@@ -226,7 +251,17 @@ function formatPayload(payload: Record<string, unknown>): string {
   }
 
   .log-body {
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .log-payload-row {
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .log-payload--right {
+    justify-content: flex-start;
+    text-align: left;
   }
 }
 </style>
