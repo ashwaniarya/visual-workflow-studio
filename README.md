@@ -30,7 +30,17 @@ npm run test
 
 ## High Level Design
 
-At a high level, the canvas drives graph mutations, graph state feeds execution and persistence, and node behavior is resolved through registry + factory + executor strategy:
+At a high level, the system works like a closed loop between UI intent, graph state, and runtime execution.  
+When a user drags, connects, edits, or deletes on the canvas, `WorkFlowCanvas` emits change events and the graph store applies only the required mutation. That updated graph state then becomes the single source used by two downstream paths: persistence (autosave/import-export) and execution (engine run + node status).  
+Node behavior itself is not hard-coded in the canvas. Instead, the node type is looked up in the registry, the factory creates the work-node instance, and the executor strategy is resolved from node config at runtime. This keeps UI rendering, graph mutation, and execution logic decoupled while still flowing through one consistent state model.
+
+In short, the architecture follows this event flow:
+
+1. **User action on canvas** -> event stream (`add`, `move`, `connect`, `config change`).
+2. **Graph mutation boundary** -> `workflowGraphStore` updates nodes/edges/indexes.
+3. **System side effects** -> history tracking + autosave scheduling.
+4. **Execution path** -> engine reads graph snapshot and runs node executors.
+5. **Feedback path** -> execution log and per-node state feed UI highlights and diagnostics.
 
 ```mermaid
 flowchart LR
