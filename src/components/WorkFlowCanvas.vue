@@ -13,6 +13,7 @@ import { WORKFLOW_CONSTANTS } from "../config/workflowConstants";
 import StartNodeRenderer from "./nodeRenderers/StartNodeRenderer.vue";
 import TransformNodeRenderer from "./nodeRenderers/TransformNodeRenderer.vue";
 import DecisionNodeRenderer from "./nodeRenderers/DecisionNodeRenderer.vue";
+import SwitchNodeRenderer from "./nodeRenderers/SwitchNodeRenderer.vue";
 import EndNodeRenderer from "./nodeRenderers/EndNodeRenderer.vue";
 
 const workflowStore = useWorkflowCanvasStore();
@@ -63,7 +64,7 @@ function onDrop(event: DragEvent) {
     id: newId,
     type: nodeType,
     position: { x: position.x, y: position.y },
-    data: { workNode },
+    data: { workNode, portDefinition: definition.portDefinition },
   };
 
   workflowStore.addNode(renderNode);
@@ -126,6 +127,9 @@ function onPaneClick() {
       </template>
       <template #node-DECISION="nodeProps">
         <DecisionNodeRenderer v-bind="nodeProps" />
+      </template>
+      <template #node-SWITCH="nodeProps">
+        <SwitchNodeRenderer v-bind="nodeProps" />
       </template>
       <template #node-END="nodeProps">
         <EndNodeRenderer v-bind="nodeProps" />

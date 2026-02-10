@@ -2,31 +2,32 @@
 import type { PortDefinition } from '../../models/ports'
 import DynamicHandleRenderer from './DynamicHandleRenderer.vue'
 
-defineProps<{
+const props = defineProps<{
   data: {
     workNode: { type: string; config: Record<string, unknown> }
     portDefinition: PortDefinition
   }
 }>()
+
+function caseCount(): number {
+  const cases = props.data.workNode.config.cases as unknown[]
+  return Array.isArray(cases) ? cases.length : 0
+}
 </script>
 
 <template>
-  <div class="node-renderer node-decision">
-    <div class="node-header">🔀 Decision</div>
+  <div class="node-renderer node-switch">
+    <div class="node-header">🔀 Switch</div>
     <div class="node-body">
-      <span class="node-preview"
-        >{{ data.workNode.config.targetField }}
-        {{ data.workNode.config.operator }}
-        {{ data.workNode.config.compareValue }}</span
-      >
+      <span class="node-preview">{{ data.workNode.config.targetField || '—' }} · {{ caseCount() }} cases</span>
     </div>
     <DynamicHandleRenderer :portDefinition="data.portDefinition" />
   </div>
 </template>
 
 <style scoped>
-.node-decision {
-  border-left: 4px solid #f59e0b;
+.node-switch {
+  border-left: 4px solid #8b5cf6;
   min-height: 60px;
 }
 </style>

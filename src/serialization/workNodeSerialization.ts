@@ -89,11 +89,17 @@ export class WorkNodeSerialization {
         // Overlay validated config onto the freshly created node
         Object.assign(workNode.config, serializedNode.config)
 
+        // Resolve portDefinition: use portResolver if available (dynamic ports),
+        // otherwise fall back to the static registry definition
+        const portDefinition = definition.portResolver
+          ? definition.portResolver(workNode.config)
+          : definition.portDefinition
+
         return {
           id: serializedNode.id,
           type: serializedNode.type,
           position: { ...serializedNode.position },
-          data: { workNode },
+          data: { workNode, portDefinition },
         } as RenderWorkNode
       },
     )

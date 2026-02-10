@@ -139,3 +139,60 @@ Actions
 - WorkFlowCanvas - Where nodes will be rendered
 - WorkFlowToolBar - It will have list of WorkNode with defualt config.
 - WorkFlowConfigPanel - On Select of a WorkNode it will prove option to change config.
+
+Trade Off of This Componsable + Strategy based design.
+
+Pros:
+
+- Easy to create new type of Node Category like API, MCP etc in future.
+
+- A node can support any number of output ports make is simple to create complex node
+
+- Schema base node configuration
+- Each node reques it own execution logic.
+
+Cons:
+
+- Requirs good understanding of possible node configuration to be able to create new node
+- More moving pieces.
+
+## Each type of Node can validate and send a NodeErrorType error to workflow executor and highlites the node for better User Expereince.
+
+Why a robost Error Handling is required.
+
+```
+                          ┌──────────────────────────────┐
+                          │  NodeExecutionError (new)     │
+                          │  ─────────────────────────    │
+                          │  nodeId, errorCode, message   │
+                          └──────────┬───────────────────┘
+                                     │ thrown by
+                          ┌──────────▼───────────────────┐
+                          │  Executors (validate-first)   │
+  Layer 1: Throw          │  ─────────────────────────    │
+                          │  Guard → Execute → Return     │
+                          └──────────┬───────────────────┘
+                                     │ caught by
+                          ┌──────────▼───────────────────┐
+                          │  Engine (try/catch per node)  │
+  Layer 2: Capture        │  ─────────────────────────    │
+                          │  Writes error to log entry    │
+                          │  + populates nodeErrorMap     │
+                          └──────────┬───────────────────┘
+                                     │ stored in
+                          ┌──────────▼───────────────────┐
+                          │  Store (nodeExecutionStateMap)│
+  Layer 3: Store          │  ─────────────────────────    │
+                          │  Map<nodeId, ExecutionState>  │
+                          │  { status, errorMessage? }    │
+                          └──────────┬───────────────────┘
+                                     │ reactive binding
+                          ┌──────────▼───────────────────┐
+                          │  Node Renderers (visual)      │
+  Layer 4: Render         │  ─────────────────────────    │
+                          │  🔴 red border + tooltip      │
+                          │  ✅ green border on success   │
+                          └──────────────────────────────┘
+```
+
+##

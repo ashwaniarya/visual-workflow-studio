@@ -38,6 +38,40 @@ function onJsonFieldChange(key: string, rawValue: string) {
 function formatJsonValue(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
+
+// ─── Array field helpers ─────────────────────────────────────────────
+
+function getArrayEntries(key: string): Record<string, unknown>[] {
+  const raw = workNode.value?.config[key];
+  return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
+}
+
+function onArrayEntryFieldChange(
+  arrayKey: string,
+  entryIndex: number,
+  fieldKey: string,
+  value: unknown,
+) {
+  const entries = [...getArrayEntries(arrayKey)];
+  entries[entryIndex] = { ...entries[entryIndex], [fieldKey]: value };
+  onFieldChange(arrayKey, entries);
+}
+
+function addArrayEntry(field: { key: string; itemFields?: { key: string; defaultValue?: unknown }[] }) {
+  const entries = [...getArrayEntries(field.key)];
+  const newEntry: Record<string, unknown> = {};
+  for (const itemField of field.itemFields ?? []) {
+    newEntry[itemField.key] = itemField.defaultValue ?? "";
+  }
+  entries.push(newEntry);
+  onFieldChange(field.key, entries);
+}
+
+function removeArrayEntry(arrayKey: string, entryIndex: number) {
+  const entries = [...getArrayEntries(arrayKey)];
+  entries.splice(entryIndex, 1);
+  onFieldChange(arrayKey, entries);
+}
 </script>
 
 <template>
@@ -146,6 +180,97 @@ function formatJsonValue(value: unknown): string {
               />
               {{ field.label }}
             </label>
+
+            <!-- Array field (dynamic repeatable entries) -->
+            <template v-else-if="field.fieldType === 'array' && field.itemFields">
+              <div
+                v-for="(entry, entryIndex) in getArrayEntries(field.key)"
+                :key="`${field.key}-${entryIndex}`"
+                class="array-entry-card"
+              >
+                <div class="array-entry-header">
+                  <span class="array-entry-index">#{{ entryIndex + 1 }}</span>
+                  <button
+                    class="array-entry-remove"
+                    @click="removeArrayEntry(field.key, entryIndex)"
+                    title="Remove entry"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div
+                  v-for="itemField in field.itemFields"
+                  :key="`${field.key}-${entryIndex}-${itemField.key}`"
+                  class="array-item-field"
+                >
+                  <label class="field-label field-label-sm">{{ itemField.label }}</label>
+
+                  <!-- Sub-field: text -->
+                  <input
+                    v-if="itemField.fieldType === 'text'"
+                    class="field-input"
+                    type="text"
+                    :placeholder="itemField.placeholder"
+                    :value="(entry as Record<string, unknown>)[itemField.key] as string"
+                    @input="
+                      onArrayEntryFieldChange(
+                        field.key,
+                        entryIndex,
+                        itemField.key,
+                        ($event.target as HTMLInputElement).value,
+                      )
+                    "
+                  />
+
+                  <!-- Sub-field: number -->
+                  <input
+                    v-else-if="itemField.fieldType === 'number'"
+                    class="field-input"
+                    type="number"
+                    :placeholder="itemField.placeholder"
+                    :value="(entry as Record<string, unknown>)[itemField.key] as number"
+                    @input="
+                      onArrayEntryFieldChange(
+                        field.key,
+                        entryIndex,
+                        itemField.key,
+                        Number(($event.target as HTMLInputElement).value),
+                      )
+                    "
+                  />
+
+                  <!-- Sub-field: select -->
+                  <select
+                    v-else-if="itemField.fieldType === 'select'"
+                    class="field-input"
+                    :value="(entry as Record<string, unknown>)[itemField.key] as string"
+                    @change="
+                      onArrayEntryFieldChange(
+                        field.key,
+                        entryIndex,
+                        itemField.key,
+                        ($event.target as HTMLSelectElement).value,
+                      )
+                    "
+                  >
+                    <option
+                      v-for="option in itemField.options"
+                      :key="option"
+                      :value="option"
+                    >
+                      {{ option }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                class="array-add-button"
+                @click="addArrayEntry(field)"
+              >
+                + Add {{ field.label?.replace(/s$/, '') || 'Entry' }}
+              </button>
+            </template>
           </div>
         </template>
       </div>
@@ -274,5 +399,72 @@ function formatJsonValue(value: unknown): string {
   color: #6c7086;
   font-size: 13px;
   text-align: center;
+}
+
+/* ─── Array field styles ────────────────────────────────────────────── */
+
+.array-entry-card {
+  background: #11111b;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.array-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.array-entry-index {
+  color: #6c7086;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.array-entry-remove {
+  background: none;
+  border: none;
+  color: #6c7086;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.array-entry-remove:hover {
+  background: #45475a;
+  color: #f38ba8;
+}
+
+.array-item-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.field-label-sm {
+  font-size: 10px;
+}
+
+.array-add-button {
+  width: 100%;
+  padding: 6px 10px;
+  background: #181825;
+  border: 1px dashed #45475a;
+  border-radius: 6px;
+  color: #89b4fa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.array-add-button:hover {
+  background: #1e1e2e;
+  border-color: #89b4fa;
 }
 </style>

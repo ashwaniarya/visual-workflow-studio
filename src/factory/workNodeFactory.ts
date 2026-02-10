@@ -3,6 +3,7 @@ import type { NodeDefinition } from '../registry/nodeRegistry'
 import { StartWorkNode } from '../models/nodes/startWorkNode'
 import { TransformWorkNode } from '../models/nodes/transformWorkNode'
 import { DecisionWorkNode } from '../models/nodes/decisionWorkNode'
+import { SwitchWorkNode } from '../models/nodes/switchWorkNode'
 import { EndWorkNode } from '../models/nodes/endWorkNode'
 
 export function createWorkNode(id: string, definition: NodeDefinition): BaseWorkNode {
@@ -13,6 +14,8 @@ export function createWorkNode(id: string, definition: NodeDefinition): BaseWork
       return new TransformWorkNode(id, definition.type, definition.defaultConfig)
     case 'DECISION':
       return new DecisionWorkNode(id, definition.type, definition.defaultConfig)
+    case 'SWITCH':
+      return new SwitchWorkNode(id, definition.type, definition.defaultConfig)
     case 'END':
       return new EndWorkNode(id, definition.type, definition.defaultConfig)
     default:

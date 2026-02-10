@@ -93,6 +93,7 @@ const FIELD_TYPE_TO_EXPECTED_TYPEOF: Record<string, string> = {
   number: 'number',
   checkbox: 'boolean',
   json: 'object',
+  array: 'object', // arrays are typeof 'object'
 }
 
 export function validateNodeConfig(node: SerializedWorkNode): void {
@@ -123,6 +124,37 @@ export function validateNodeConfig(node: SerializedWorkNode): void {
           throw new Error(
             `Node "${node.id}": config key "${field.key}" expected json (object) but got ${actualType === 'object' ? (value === null ? 'null' : 'array') : actualType}`,
           )
+        }
+      // array field: must be an actual array, validate each entry's sub-fields
+      } else if (field.fieldType === 'array') {
+        if (!Array.isArray(value)) {
+          throw new Error(
+            `Node "${node.id}": config key "${field.key}" expected array but got ${actualType}`,
+          )
+        }
+        if (field.itemFields) {
+          const itemFieldTypes: Record<string, string> = {}
+          for (const itemField of field.itemFields) {
+            const mapped = FIELD_TYPE_TO_EXPECTED_TYPEOF[itemField.fieldType]
+            if (mapped) itemFieldTypes[itemField.key] = mapped
+          }
+          for (let entryIndex = 0; entryIndex < value.length; entryIndex++) {
+            const entry = value[entryIndex] as Record<string, unknown>
+            if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+              throw new Error(
+                `Node "${node.id}": config key "${field.key}[${entryIndex}]" must be a plain object`,
+              )
+            }
+            for (const itemField of field.itemFields) {
+              const entryValue = entry[itemField.key]
+              const expectedItemType = itemFieldTypes[itemField.key]
+              if (entryValue !== undefined && expectedItemType && typeof entryValue !== expectedItemType) {
+                throw new Error(
+                  `Node "${node.id}": config key "${field.key}[${entryIndex}].${itemField.key}" expected ${expectedItemType} but got ${typeof entryValue}`,
+                )
+              }
+            }
+          }
         }
       } else if (actualType !== expectedType) {
         throw new Error(

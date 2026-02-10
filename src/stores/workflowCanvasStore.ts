@@ -64,6 +64,19 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
       const node = this.nodes.find((n) => n.id === nodeId)
       if (node?.data?.workNode) {
         node.data.workNode.config[key] = value
+
+        // If this node type has a portResolver, recompute ports from config
+        const definition = getNodeDefinition(node.data.workNode.type)
+        if (definition.portResolver) {
+          const resolvedPortDefinition = definition.portResolver(node.data.workNode.config)
+          node.data.portDefinition = resolvedPortDefinition
+
+          // Prune edges whose sourceHandle no longer exists on this node
+          const validOutputPortIds = new Set(resolvedPortDefinition.outputPorts.map((p) => p.id))
+          this.edges = this.edges.filter(
+            (edge) => edge.source !== nodeId || validOutputPortIds.has(edge.sourceHandle ?? 'out-0'),
+          )
+        }
       }
     },
 

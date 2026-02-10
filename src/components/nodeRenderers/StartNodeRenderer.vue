@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { Handle, Position } from '@vue-flow/core'
+import type { PortDefinition } from '../../models/ports'
+import DynamicHandleRenderer from './DynamicHandleRenderer.vue'
 
 defineProps<{
-  data: { workNode: { type: string; config: Record<string, unknown> } }
+  data: {
+    workNode: { type: string; config: Record<string, unknown> }
+    portDefinition: PortDefinition
+  }
 }>()
 </script>
 
@@ -12,7 +16,7 @@ defineProps<{
     <div class="node-body">
       <span class="node-preview">{{ JSON.stringify(data.workNode.config.inputPayload).slice(0, 30) }}</span>
     </div>
-    <Handle type="source" :position="Position.Right" id="out-0" class="handle-source" />
+    <DynamicHandleRenderer :portDefinition="data.portDefinition" />
   </div>
 </template>
 

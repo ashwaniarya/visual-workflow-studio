@@ -3,6 +3,7 @@ import type { RenderWorkNode } from '../models/renderWorkNode'
 import type { ExecutionLogEntry } from '../models/executionLog'
 import type { WorkflowContext } from './workflowContext'
 import type { OutputPortDefinition } from '../models/ports'
+import type { NodeExecutor } from './executors/nodeExecutor'
 import { getNodeDefinition } from '../registry/nodeRegistry'
 import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
 
@@ -48,14 +49,18 @@ export function canConnect(
   const targetDefinition = getNodeDefinition(targetWorkNode.type)
   const sourceDefinition = getNodeDefinition(sourceWorkNode.type)
 
+  // Use live portDefinition from node data (accounts for portResolver)
+  const targetPortDefinition = targetNode.data?.portDefinition ?? targetDefinition.portDefinition
+  const sourcePortDefinition = sourceNode.data?.portDefinition ?? sourceDefinition.portDefinition
+
   // Rule 2: Target must accept inputs
-  if (targetDefinition.portDefinition.inputCount <= 0) {
+  if (targetPortDefinition.inputCount <= 0) {
     return false
   }
 
   // Rule 3: Target input not already occupied (1 edge per input for v1)
   const existingEdgesToTarget = edges.filter((e) => e.target === targetNodeId)
-  if (existingEdgesToTarget.length >= targetDefinition.portDefinition.inputCount) {
+  if (existingEdgesToTarget.length >= targetPortDefinition.inputCount) {
     return false
   }
 
@@ -69,8 +74,8 @@ export function canConnect(
     return false
   }
 
-  // Rule 6: Source port must exist on the source node definition
-  const validSourcePorts = sourceDefinition.portDefinition.outputPorts.map((p) => p.id)
+  // Rule 6: Source port must exist on the source node's live portDefinition
+  const validSourcePorts = sourcePortDefinition.outputPorts.map((p) => p.id)
   if (!validSourcePorts.includes(sourcePortId)) {
     return false
   }
@@ -152,16 +157,17 @@ export function executeWorkflow(
       )
     }
 
-    const workNode = currentNode.data?.workNode
+    const workNode: import('../models/baseWorkNode').BaseWorkNode | undefined = currentNode.data?.workNode
     if (!workNode) {
       throw new Error(`Node ${currentNode.id} has no workNode instance`)
     }
 
     const nodeDefinition = getNodeDefinition(workNode.type)
+    const livePortDefinition = currentNode.data?.portDefinition ?? nodeDefinition.portDefinition
     const snapshotInput = structuredClone(context.payload)
 
     // Execute the node
-    const executor = workNode.getExecutor()
+    const executor: NodeExecutor = workNode.getExecutor()
     let selectedPort: OutputPortDefinition | null = null
     let executionStatus: 'success' | 'error' = 'success'
     let errorMessage: string | undefined
@@ -170,7 +176,7 @@ export function executeWorkflow(
       selectedPort = executor.execute(
         context,
         workNode.config,
-        nodeDefinition.portDefinition.outputPorts,
+        livePortDefinition.outputPorts,
       )
     } catch (executionError) {
       executionStatus = 'error'
@@ -182,9 +188,9 @@ export function executeWorkflow(
     // Determine next node
     let nextNodeId: string | null = null
     if (selectedPort && executionStatus === 'success') {
-      const adjacencyEntries = adjacency.get(currentNode.id) ?? []
-      const matchingEntry = adjacencyEntries.find(
-        (entry) => entry.sourcePortId === selectedPort!.id,
+      const adjacencyEntries: AdjacencyEntry[] = adjacency.get(currentNode.id) ?? []
+      const matchingEntry: AdjacencyEntry | undefined = adjacencyEntries.find(
+        (entry: AdjacencyEntry) => entry.sourcePortId === selectedPort!.id,
       )
       nextNodeId = matchingEntry?.targetNodeId ?? null
     }
@@ -212,7 +218,7 @@ export function executeWorkflow(
 
     // Move to next node
     if (nextNodeId) {
-      currentNode = nodes.find((n) => n.id === nextNodeId) ?? null
+      currentNode = nodes.find((n: RenderWorkNode) => n.id === nextNodeId) ?? null
     } else {
       currentNode = null
     }
