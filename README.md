@@ -65,7 +65,54 @@ Project structure and key components:
 - `src/config/workflowConstants.ts`
   - centralized limits and policy flags.
 
+# UI Component Design and Minimal Design System
+
+The UI follows layered composition so behavior and presentation can evolve without rewriting the complete workflow surface.
+
+```mermaid
+flowchart TB
+  AppShell[AppShell] --> WorkflowPage[WorkflowPage]
+  WorkflowPage --> WorkFlowCanvas[WorkFlowCanvas]
+  WorkflowPage --> NodeConfigPanel[NodeConfigPanel]
+  WorkflowPage --> ExecutionLogPanel[ExecutionLogPanel]
+  WorkFlowCanvas --> NodeRendererWrapper[NodeRendererWrapper]
+  NodeRendererWrapper --> StartNodeRenderer[StartNodeRenderer]
+  NodeRendererWrapper --> TransformNodeRenderer[TransformNodeRenderer]
+  NodeRendererWrapper --> DecisionNodeRenderer[DecisionNodeRenderer]
+  NodeRendererWrapper --> SwitchNodeRenderer[SwitchNodeRenderer]
+  NodeRendererWrapper --> EndNodeRenderer[EndNodeRenderer]
+  WorkFlowCanvas --> DeletableEdgeRenderer[DeletableEdgeRenderer]
+```
+
+Component boundaries:
+
+- `WorkFlowCanvas` handles canvas-level interactions (drag/drop, connect, selection, and change streams).
+- Node renderers handle node-specific visuals and interactions.
+- `DeletableEdgeRenderer` handles edge-local actions.
+- Configuration UI handles schema-driven editing of node config.
+- Execution log UI handles runtime visibility and error feedback.
+
+Minimal design system principles:
+
+- Use a compact token set for spacing, radius, typography, and semantic colors.
+- Keep interaction states explicit: normal, hover, selected, executing, success, and error.
+- Reuse semantic tokens first, then add new values only when a clear new role appears.
+- Keep visual rules consistent across node and edge surfaces.
+
+Accessibility baseline:
+
+- Visible keyboard focus for interactive controls.
+- High contrast for selected/error/success states.
+- Comfortable interaction targets for delete and edge actions.
+
+Pros and cons of this minimal system:
+
+- ✅ Pros: faster UI extension, visual consistency, easier theme evolution.
+- ⚠️ Cons: token governance is required to avoid style drift.
+
 ## Low Level Design
+
+In low level design I am covering only key flows.
 
 ### Workflow runtime flow
 
