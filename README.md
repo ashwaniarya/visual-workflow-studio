@@ -1,11 +1,8 @@
 # Project Overview
 
-Visual Workflow Studio is a Vue 3 + TypeScript workflow builder where you drag nodes, connect them as a DAG, run data simulation, and inspect step-by-step execution logs.
+Visual Workflow Studio is a visual DAG editor built with Vue 3 and TypeScript. You drag nodes onto a canvas, connect them into a workflow, configure behavior per node, and run the flow to inspect execution logs step by step.
 
-- 🎯 **Core idea:** turn workflow authoring into a visual canvas with strict graph rules.
-- 🧩 **Built-in node categories:** `START`, `TRANSFORM`, `DECISION`, `SWITCH`, `END`.
-- ▶️ **Execution model:** each node resolves its own executor strategy, then the engine walks node-to-node via output ports.
-- 💾 **Persistence:** export/import JSON and autosave snapshot restore from local storage.
+Today the built-in node types are `START`, `TRANSFORM`, `DECISION`, `SWITCH`, and `END`. The execution engine moves through the graph by following the output port selected by each node executor. Workflows can be exported/imported as JSON, and canvas state is autosaved locally.
 
 # Setup
 
@@ -21,7 +18,7 @@ npm install
 npm run dev
 ```
 
-## Build, preview, test
+## Build, preview, and test
 
 ```bash
 npm run build
@@ -31,7 +28,7 @@ npm run test
 
 # Architectural
 
-High-level flow of UI, graph state, execution, and persistence:
+At a high level, the canvas drives graph mutations, graph state feeds execution and persistence, and node behavior is resolved through registry + factory + executor strategy:
 
 ```mermaid
 flowchart LR
@@ -70,7 +67,7 @@ Project structure and key components:
 
 ## Low Level Design
 
-### Workflow and node creation lifecycle
+### Workflow runtime flow
 
 ```mermaid
 sequenceDiagram
@@ -92,78 +89,73 @@ sequenceDiagram
 
 ### How node generation works
 
-- 🏗️ **Pattern stack:** Registry + Factory + Strategy.
-- `NodeDefinition` controls: default config, config schema, port definition, executor resolver.
-- `createWorkNode(id, definition)` returns a node that resolves executor from the current config.
-- `RenderWorkNode` wraps `workNode` + live `portDefinition` for Vue Flow rendering.
-- `portResolver` enables dynamic ports (for example `SWITCH` cases).
+Node generation follows a small pipeline:
 
-### Why this pattern is extensible
+1. Canvas receives a node type from drag/drop.
+2. Registry returns a `NodeDefinition`.
+3. Factory creates a `workNode` instance with default config.
+4. UI wraps it as `RenderWorkNode` (with live port definition) and inserts it into graph state.
 
-To add a new WorkNode type, you usually:
+[`NodeDefinition`](src/registry/nodeRegistry.ts) is the key extension contract. It contains default config, schema for config UI, port metadata, and [`executorResolver(config)`](src/registry/nodeRegistry.ts). For dynamic branching nodes (like `SWITCH`), [`portResolver(config)`](src/registry/nodeRegistry.ts) can recalculate output ports at runtime.
 
-1. Register a new `NodeDefinition` in `nodeRegistry`.
-2. Add a node executor in `src/engine/executors/`.
-3. Add its renderer in `src/components/nodeRenderers/`.
-4. Wire the renderer slot in `WorkFlowCanvas.vue`.
+### Why this makes new WorkNodes easy to add
 
-Pros and cons of this model:
+To add a new node type, you usually only touch four places:
 
-- ✅ **Pros**
-  - Open for extension with minimal changes in core graph logic.
-  - Node-specific behavior stays local (schema + ports + executor).
-  - Dynamic branching supports richer control-flow nodes.
-- ⚠️ **Cons**
-  - More moving parts than a single monolithic node class.
-  - New node authors must understand schema, execution, and render contracts.
+1. Register the node definition in `src/registry/nodeRegistry.ts`.
+2. Implement executor behavior in `src/engine/executors/`.
+3. Add a node renderer in `src/components/nodeRenderers/`.
+4. Wire the renderer slot in `src/components/WorkFlowCanvas.vue`.
+
+Pros and cons:
+
+- ✅ Pros: strong separation of concerns, better extensibility, node-specific behavior stays local.
+- ⚠️ Cons: a bit more moving pieces, and new contributors need to learn the registry/factory/executor contract.
 
 # State Management
 
-Pinia stores are split by responsibility boundaries:
+State is split across Pinia stores by responsibility:
 
-- `workflowGraphStore`
-  - Owns nodes/edges, adjacency, and atomic graph mutations.
-  - Uses normalized indexes (`nodeById`, `edgeById`, `adjacencyByNodeId`) for targeted operations.
-- `workflowHistoryStore`
-  - Owns command history lifecycle (`run`, `undo`, `redo`) with depth tracking.
-  - Caps history via `WORKFLOW_CONSTANTS.MAX_UNDO_REDO_HISTORY_STEPS`.
-- `workflowPersistenceStore`
-  - Owns autosave schedule and storage boundaries.
-  - Uses centralized policies like `WORKFLOW_AUTOSAVE_DEBOUNCE_MS`.
-- `workflowExecutionStore`
-  - Owns runtime flags (`isExecuting`), execution logs, and node execution state map.
+- `workflowGraphStore`: graph nodes/edges, adjacency indexes, selection, and graph mutation primitives.
+- `workflowHistoryStore`: command history lifecycle (`run`, `undo`, `redo`) with bounded depth.
+- `workflowPersistenceStore`: autosave scheduling, import/export, and restore from local storage.
+- `workflowExecutionStore`: execution lifecycle, execution logs, and per-node execution status.
 
-Interaction flow:
+Interaction shape:
 
-- UI event -> graph mutation command -> history sync -> optional autosave -> execution/log updates when run starts.
+`UI event -> graph command -> history update -> autosave (optional) -> execution state update (when run is triggered)`
+
+This separation keeps each store focused while still allowing them to compose cleanly.
 
 ## Performance Consideration
 
-For larger graphs (for example ~100 nodes), the design focuses on selective updates instead of broad array replacement.
+For larger workflows, the graph layer is optimized for targeted updates rather than full collection replacement.
 
-- ⚡ **Data structures chosen for scale**
-  - `Map<string, RenderWorkNode>` and `Map<string, Edge>` for O(1) entity lookup.
-  - `Map<string, Set<string>>` adjacency index for fast incident-edge operations.
-- 🎯 **Selective node/edge change**
-  - `applyNodeChanges` and `applyEdgeChanges` process granular canvas updates.
-  - Dynamic port changes remove only invalid incident edges, not the whole edge list.
-  - `splice`-based updates preserve top-level array identity used by Vue Flow consumers.
-- 🧠 **Safety limits via centralized flags**
-  - `MAX_EXECUTION_STEPS` guards against runaway loops.
-  - `EDGE_VALIDATION_ENABLED` controls connection-rule enforcement.
+The graph store uses:
 
-This is aligned with the selective-render refactor captured in `docs/graph_render_performance_audit.md`.
+- `nodeById: Map<string, RenderWorkNode>`
+- `edgeById: Map<string, Edge>`
+- `adjacencyByNodeId: Map<string, Set<string>>`
+
+Why this matters:
+
+- Node/edge lookup and incident-edge operations stay fast (O(1) style lookups).
+- Dynamic port changes can remove only invalid affected edges instead of filtering every edge.
+- `splice` updates preserve top-level array identity, which aligns better with Vue Flow change streams (`applyNodeChanges`, `applyEdgeChanges`).
+
+Pros and cons of this approach:
+
+- ✅ Pros: better scaling behavior for dense workflows and lower reactive fan-out.
+- ⚠️ Cons: more index consistency rules to maintain (handled by graph consistency assertions in development).
+
+Hard limits and policy flags are centralized in `src/config/workflowConstants.ts` (for example `MAX_EXECUTION_STEPS`, autosave debounce, undo/redo depth, zoom bounds, and edge validation toggle).
 
 ## Code Quality
 
-- ✅ **Single-responsibility store boundaries**
-  - Graph, history, persistence, and execution concerns are isolated.
-- ✅ **Policy centralization**
-  - Runtime limits and hard-coded values are consolidated in `WORKFLOW_CONSTANTS`.
-- ✅ **Validation and consistency checks**
-  - Graph consistency assertions run in non-production builds.
-  - Workflow import/export uses serialization + validation boundaries.
-- ✅ **Testing surface**
-  - Store and engine behavior are covered through Vitest suites.
-- ✅ **Error handling layers**
-  - Executor-level throw, engine capture, store mapping, and renderer feedback pipeline.
+Code quality is driven by architecture boundaries first, then tests and runtime checks:
+
+- Stores follow clear single-responsibility boundaries.
+- Hard-coded runtime values are centralized in `WORKFLOW_CONSTANTS`.
+- Workflow import/export is isolated behind serialization/validation boundaries.
+- The engine captures execution errors into structured runtime state for renderer feedback.
+- Vitest covers important graph, history, and engine behaviors.
