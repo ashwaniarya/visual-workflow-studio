@@ -60,7 +60,9 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useWorkflowCanvasStore } from "../stores/workflowCanvasStore";
+import { useWorkflowGraphStore } from "../stores/workflowGraphStore";
+import { useWorkflowHistoryStore } from "../stores/workflowHistoryStore";
+import { useWorkflowPersistenceStore } from "../stores/workflowPersistenceStore";
 import {
   useThemePreferenceStore,
   type ThemeMode,
@@ -69,20 +71,25 @@ import BaseButton from "./primitives/BaseButton.vue";
 import BaseInput from "./primitives/BaseInput.vue";
 import BaseTypography from "./primitives/BaseTypography.vue";
 
-const workflowCanvasStore = useWorkflowCanvasStore();
+const workflowGraphStore = useWorkflowGraphStore();
+const workflowHistoryStore = useWorkflowHistoryStore();
+const workflowPersistenceStore = useWorkflowPersistenceStore();
 const themePreferenceStore = useThemePreferenceStore();
 const fileInputReference = ref<HTMLInputElement | null>(null);
 const selectedThemeMode = computed(
   () => themePreferenceStore.selectedThemeMode,
 );
 const isWorkflowAutosaveInProgress = computed(
-  () => workflowCanvasStore.isWorkflowAutosaveInProgress,
+  () => workflowPersistenceStore.isWorkflowAutosaveInProgress,
 );
-const canUndoUiAction = computed(() => workflowCanvasStore.canUndoUiAction);
-const canRedoUiAction = computed(() => workflowCanvasStore.canRedoUiAction);
+const canUndoUiAction = computed(() => workflowHistoryStore.canUndoUiAction);
+const canRedoUiAction = computed(() => workflowHistoryStore.canRedoUiAction);
 
 function handleExport() {
-  const jsonString = workflowCanvasStore.exportWorkflow();
+  const jsonString = workflowPersistenceStore.exportWorkflow(
+    workflowGraphStore.graphNodes,
+    workflowGraphStore.graphEdges,
+  );
   const blob = new Blob([jsonString], { type: "application/json" });
   const downloadUrl = URL.createObjectURL(blob);
 
@@ -101,11 +108,17 @@ function handleImport() {
 }
 
 function handleUndoAction() {
-  workflowCanvasStore.undoLastUiAction();
+  workflowHistoryStore.undoLastUiAction({
+    onAutosaveRequested: () =>
+      workflowPersistenceStore.scheduleWorkflowAutosave(),
+  });
 }
 
 function handleRedoAction() {
-  workflowCanvasStore.redoLastUiAction();
+  workflowHistoryStore.redoLastUiAction({
+    onAutosaveRequested: () =>
+      workflowPersistenceStore.scheduleWorkflowAutosave(),
+  });
 }
 
 function onThemeModeChanged(themeMode: string) {
@@ -122,7 +135,7 @@ function onFileSelected(event: Event) {
   const reader = new FileReader();
   reader.onload = () => {
     const jsonString = reader.result as string;
-    workflowCanvasStore.importWorkflow(jsonString);
+    workflowPersistenceStore.importWorkflow(jsonString);
   };
   reader.readAsText(file);
 

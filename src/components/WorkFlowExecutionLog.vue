@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useWorkflowCanvasStore } from "../stores/workflowCanvasStore";
+import { useWorkflowExecutionStore } from "../stores/workflowExecutionStore";
 import BaseButton from "./primitives/BaseButton.vue";
 import BaseSurface from "./primitives/BaseSurface.vue";
 import BaseTypography from "./primitives/BaseTypography.vue";
 
-const workflowStore = useWorkflowCanvasStore();
-const executionLog = computed(() => workflowStore.executionLog);
-const isExecuting = computed(() => workflowStore.isExecuting);
+const workflowExecutionStore = useWorkflowExecutionStore();
+const executionLog = computed(() => workflowExecutionStore.executionLog);
+const isExecuting = computed(() => workflowExecutionStore.isExecuting);
 
 function runWorkflow() {
-  workflowStore.runWorkflow();
+  workflowExecutionStore.runWorkflow();
 }
 
 function clearLog() {
-  workflowStore.clearExecutionLog();
+  workflowExecutionStore.clearExecutionLog();
 }
 
 function formatPayload(payload: Record<string, unknown>): string {

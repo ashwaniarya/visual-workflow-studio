@@ -5,7 +5,8 @@ import {
   getBezierPath,
   type EdgeProps,
 } from "@vue-flow/core";
-import { useWorkflowCanvasStore } from "../../stores/workflowCanvasStore";
+import { useWorkflowGraphStore } from "../../stores/workflowGraphStore";
+import { useWorkflowExecutionStore } from "../../stores/workflowExecutionStore";
 
 type DeletableEdgeRendererProps = Pick<
   EdgeProps,
@@ -21,10 +22,13 @@ type DeletableEdgeRendererProps = Pick<
 
 const props = defineProps<DeletableEdgeRendererProps>();
 
-const workflowStore = useWorkflowCanvasStore();
+const workflowGraphStore = useWorkflowGraphStore();
+const workflowExecutionStore = useWorkflowExecutionStore();
 
 const isEdgeHovered = ref(false);
-const isWorkflowExecutionInProgress = computed(() => workflowStore.isExecuting);
+const isWorkflowExecutionInProgress = computed(
+  () => workflowExecutionStore.isExecuting,
+);
 
 const edgePath = computed(() => {
   return getBezierPath({
@@ -42,7 +46,7 @@ const labelX = computed(() => edgePath.value[1]);
 const labelY = computed(() => edgePath.value[2]);
 
 function handleDeleteEdge() {
-  workflowStore.removeEdge(props.id);
+  workflowGraphStore.removeEdge(props.id);
 }
 </script>
 

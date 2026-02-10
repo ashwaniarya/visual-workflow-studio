@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { useWorkflowCanvasStore } from "../../stores/workflowCanvasStore";
+import { useWorkflowGraphStore } from "../../stores/workflowGraphStore";
 
 const props = defineProps<{
   nodeId: string;
 }>();
 
-const workflowStore = useWorkflowCanvasStore();
+const workflowGraphStore = useWorkflowGraphStore();
 
 function handleDeleteNode() {
-  workflowStore.removeNode(props.nodeId);
+  workflowGraphStore.removeNode(props.nodeId);
 }
 </script>
 

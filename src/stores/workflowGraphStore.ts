@@ -1,14 +1,14 @@
+// Use case:
+// - Owns graph domain state, graph invariants, and graph mutation commands.
+// Safe additions:
+// - Node/edge primitives, graph validation, node-selection behavior tied to graph domain.
+// Avoid adding:
+// - Execution runtime state, persistence internals, command stack implementation details.
 import { defineStore } from 'pinia'
 import type { Edge, EdgeChange, NodeChange } from '@vue-flow/core'
 import type { RenderWorkNode } from '../models/renderWorkNode'
-import type { ExecutionLogEntry } from '../models/executionLog'
-import type { NodeExecutionStateMap } from '../engine/nodeExecutionState'
 import { getNodeDefinition, getAllNodeDefinitions } from '../registry/nodeRegistry'
-import { canConnect, executeWorkflow } from '../engine/workflowEngine'
-import { WorkNodeSerialization } from '../serialization/workNodeSerialization'
-import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
-import type { WorkflowCommand } from './helpers/workflowCommandHistory'
-import { WorkflowCommandHistory } from './helpers/workflowCommandHistory'
+import { canConnect } from '../engine/workflowEngine'
 import {
   createAddEdgeCommand,
   createAddNodeCommand,
@@ -25,52 +25,27 @@ import {
   removeEdgeFromAdjacencyIndex,
   type AdjacencyByNodeId,
 } from './helpers/graphStateHelpers'
+import { useWorkflowHistoryStore } from './workflowHistoryStore'
+import type { WorkflowCommand } from './helpers/workflowCommandHistory'
+import { useWorkflowPersistenceStore } from './workflowPersistenceStore'
 
-const workNodeSerialization = new WorkNodeSerialization()
-
-// ─── State Interface ─────────────────────────────────────────────────
-
-interface WorkflowCanvasState {
+interface WorkflowGraphState {
   graphNodes: RenderWorkNode[]
   graphEdges: Edge[]
   nodeById: Map<string, RenderWorkNode>
   edgeById: Map<string, Edge>
   adjacencyByNodeId: AdjacencyByNodeId
   selectedNodeId: string | null
-  executionLog: ExecutionLogEntry[]
-  isExecuting: boolean
-  nodeExecutionStateMap: NodeExecutionStateMap
-  isWorkflowAutosaveInProgress: boolean
-  lastWorkflowAutosavedTimestamp: number | null
-  workflowAutosaveDebounceTimerId: ReturnType<typeof setTimeout> | null
-  workflowAutosaveIndicatorTimerId: ReturnType<typeof setTimeout> | null
-  workflowCommandHistory: WorkflowCommandHistory
-  undoCommandDepth: number
-  redoCommandDepth: number
 }
 
-// ─── Store Definition ────────────────────────────────────────────────
-
-export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
-  state: (): WorkflowCanvasState => ({
+export const useWorkflowGraphStore = defineStore('workflowGraph', {
+  state: (): WorkflowGraphState => ({
     graphNodes: [],
     graphEdges: [],
     nodeById: new Map(),
     edgeById: new Map(),
     adjacencyByNodeId: new Map(),
     selectedNodeId: null,
-    executionLog: [],
-    isExecuting: false,
-    nodeExecutionStateMap: new Map(),
-    isWorkflowAutosaveInProgress: false,
-    lastWorkflowAutosavedTimestamp: null,
-    workflowAutosaveDebounceTimerId: null,
-    workflowAutosaveIndicatorTimerId: null,
-    workflowCommandHistory: new WorkflowCommandHistory(
-      WORKFLOW_CONSTANTS.MAX_UNDO_REDO_HISTORY_STEPS,
-    ),
-    undoCommandDepth: 0,
-    redoCommandDepth: 0,
   }),
 
   getters: {
@@ -87,7 +62,7 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
     },
 
     selectedNodeDefinition() {
-      const node = this.selectedNode as RenderWorkNode 
+      const node = this.selectedNode as RenderWorkNode
       if (!node?.data?.workNode) return undefined
       return getNodeDefinition(node.data.workNode.type)
     },
@@ -95,130 +70,19 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
     availableNodeDefinitions() {
       return getAllNodeDefinitions()
     },
-
-    canUndoUiAction(state): boolean {
-      return state.undoCommandDepth > 0
-    },
-
-    canRedoUiAction(state): boolean {
-      return state.redoCommandDepth > 0
-    },
   },
 
   actions: {
-    synchronizeCommandHistoryDepths() {
-      this.undoCommandDepth = this.workflowCommandHistory.undoDepth
-      this.redoCommandDepth = this.workflowCommandHistory.redoDepth
-    },
-
-    clearUiCommandHistory() {
-      this.workflowCommandHistory.clear()
-      this.synchronizeCommandHistoryDepths()
-    },
-
     runUiCommand(
       workflowCommand: WorkflowCommand,
       options?: { shouldAutosave?: boolean },
     ): boolean {
-      const hasCommandExecuted = this.workflowCommandHistory.runCommand(workflowCommand)
-      this.synchronizeCommandHistoryDepths()
-      if (hasCommandExecuted && options?.shouldAutosave !== false) {
-        this.scheduleWorkflowAutosave()
-      }
-      return hasCommandExecuted
-    },
-
-    undoLastUiAction(options?: { shouldAutosave?: boolean }): boolean {
-      const hasUndoApplied = this.workflowCommandHistory.undo()
-      this.synchronizeCommandHistoryDepths()
-      if (hasUndoApplied && options?.shouldAutosave !== false) {
-        this.scheduleWorkflowAutosave()
-      }
-      return hasUndoApplied
-    },
-
-    redoLastUiAction(options?: { shouldAutosave?: boolean }): boolean {
-      const hasRedoApplied = this.workflowCommandHistory.redo()
-      this.synchronizeCommandHistoryDepths()
-      if (hasRedoApplied && options?.shouldAutosave !== false) {
-        this.scheduleWorkflowAutosave()
-      }
-      return hasRedoApplied
-    },
-
-    beginWorkflowAutosaveIndicator() {
-      this.isWorkflowAutosaveInProgress = true
-
-      if (this.workflowAutosaveIndicatorTimerId !== null) {
-        clearTimeout(this.workflowAutosaveIndicatorTimerId)
-        this.workflowAutosaveIndicatorTimerId = null
-      }
-    },
-
-    finishWorkflowAutosaveIndicator() {
-      if (typeof window === 'undefined') {
-        this.isWorkflowAutosaveInProgress = false
-        this.workflowAutosaveIndicatorTimerId = null
-        return
-      }
-
-      this.workflowAutosaveIndicatorTimerId = window.setTimeout(() => {
-        this.isWorkflowAutosaveInProgress = false
-        this.workflowAutosaveIndicatorTimerId = null
-      }, WORKFLOW_CONSTANTS.WORKFLOW_SAVE_INDICATOR_MIN_VISIBLE_MS)
-    },
-
-    scheduleWorkflowAutosave() {
-      if (typeof window === 'undefined') {
-        return
-      }
-
-      if (this.workflowAutosaveDebounceTimerId !== null) {
-        clearTimeout(this.workflowAutosaveDebounceTimerId)
-      }
-
-      this.workflowAutosaveDebounceTimerId = window.setTimeout(() => {
-        this.workflowAutosaveDebounceTimerId = null
-        this.persistWorkflowSnapshotToStorage()
-      }, WORKFLOW_CONSTANTS.WORKFLOW_AUTOSAVE_DEBOUNCE_MS)
-    },
-
-    persistWorkflowSnapshotToStorage() {
-      if (typeof window === 'undefined') {
-        return
-      }
-
-      this.beginWorkflowAutosaveIndicator()
-      try {
-        const workflowJsonString = this.exportWorkflow()
-        window.localStorage.setItem(WORKFLOW_CONSTANTS.WORKFLOW_STORAGE_KEY, workflowJsonString)
-        this.lastWorkflowAutosavedTimestamp = Date.now()
-      } finally {
-        this.finishWorkflowAutosaveIndicator()
-      }
-    },
-
-    restoreWorkflowSnapshotFromStorage(): boolean {
-      if (typeof window === 'undefined') {
-        return false
-      }
-
-      const workflowJsonString = window.localStorage.getItem(WORKFLOW_CONSTANTS.WORKFLOW_STORAGE_KEY)
-      if (!workflowJsonString) {
-        return false
-      }
-
-      try {
-        const { nodes, edges } = workNodeSerialization.deserialise(workflowJsonString)
-        this.replaceGraphData(nodes, edges, { shouldAutosave: false })
-        this.selectedNodeId = null
-        this.executionLog = []
-        this.nodeExecutionStateMap = new Map()
-        return true
-      } catch {
-        window.localStorage.removeItem(WORKFLOW_CONSTANTS.WORKFLOW_STORAGE_KEY)
-        return false
-      }
+      const workflowHistoryStore = useWorkflowHistoryStore()
+      const workflowPersistenceStore = useWorkflowPersistenceStore()
+      return workflowHistoryStore.runUiCommand(workflowCommand, {
+        shouldAutosave: options?.shouldAutosave,
+        onAutosaveRequested: () => workflowPersistenceStore.scheduleWorkflowAutosave(),
+      })
     },
 
     runAtomicGraphMutation(performMutation: () => void) {
@@ -255,9 +119,11 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
         this.edgeById = normalizedGraphState.edgeById
         this.adjacencyByNodeId = normalizedGraphState.adjacencyByNodeId
       })
-      this.clearUiCommandHistory()
+      const workflowHistoryStore = useWorkflowHistoryStore()
+      workflowHistoryStore.clearUiCommandHistory()
       if (options?.shouldAutosave !== false) {
-        this.scheduleWorkflowAutosave()
+        const workflowPersistenceStore = useWorkflowPersistenceStore()
+        workflowPersistenceStore.scheduleWorkflowAutosave()
       }
     },
 
@@ -298,8 +164,6 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
         if (this.selectedNodeId === nodeId) {
           this.selectedNodeId = null
         }
-
-        this.nodeExecutionStateMap.delete(nodeId)
       })
       return true
     },
@@ -316,7 +180,7 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
         const resolvedPortDefinition = definition.portResolver(node.data.workNode.config)
         node.data.portDefinition = resolvedPortDefinition
 
-        const validOutputPortIds = new Set(resolvedPortDefinition.outputPorts.map((p) => p.id))
+        const validOutputPortIds = new Set(resolvedPortDefinition.outputPorts.map((outputPort) => outputPort.id))
         const invalidEdgeIds = Array.from(this.adjacencyByNodeId.get(nodeId) ?? []).filter((edgeId) => {
           const edge = this.edgeById.get(edgeId)
           if (!edge || edge.source !== nodeId) {
@@ -392,7 +256,12 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
       return this.runUiCommand(removeNodeCommand, options)
     },
 
-    updateConfigOfNodeById(nodeId: string, key: string, value: unknown, options?: { shouldAutosave?: boolean }): boolean {
+    updateConfigOfNodeById(
+      nodeId: string,
+      key: string,
+      value: unknown,
+      options?: { shouldAutosave?: boolean },
+    ): boolean {
       const updateNodeConfigCommand = createUpdateNodeConfigCommand({
         nodeId,
         fieldKey: key,
@@ -406,20 +275,23 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
       return this.runUiCommand(updateNodeConfigCommand, options)
     },
 
-    updatePositionOfNodeById(nodeId: string, position: NodeCanvasPosition, options?: { shouldAutosave?: boolean }): boolean {
+    updatePositionOfNodeById(
+      nodeId: string,
+      position: NodeCanvasPosition,
+      options?: { shouldAutosave?: boolean },
+    ): boolean {
       const node = this.nodeById.get(nodeId)
       if (!node) {
         return false
       }
-      const hasNodePositionChanged =
-        node.position.x !== position.x ||
-        node.position.y !== position.y
+      const hasNodePositionChanged = node.position.x !== position.x || node.position.y !== position.y
       if (!hasNodePositionChanged) {
         return false
       }
       const hasNodePositionBeenUpdated = this.applyMoveNodePrimitive(nodeId, position)
       if (hasNodePositionBeenUpdated && options?.shouldAutosave !== false) {
-        this.scheduleWorkflowAutosave()
+        const workflowPersistenceStore = useWorkflowPersistenceStore()
+        workflowPersistenceStore.scheduleWorkflowAutosave()
       }
       return hasNodePositionBeenUpdated
     },
@@ -429,7 +301,7 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
 
       for (const nodeChange of nodeChanges) {
         if (nodeChange.type === 'position' && nodeChange.position) {
-          this.applyMoveNodePrimitive(nodeChange.id, {
+          this.updatePositionOfNodeById(nodeChange.id, {
             x: nodeChange.position.x,
             y: nodeChange.position.y,
           })
@@ -462,7 +334,8 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
       }
 
       if (shouldScheduleWorkflowAutosave) {
-        this.scheduleWorkflowAutosave()
+        const workflowPersistenceStore = useWorkflowPersistenceStore()
+        workflowPersistenceStore.scheduleWorkflowAutosave()
       }
     },
 
@@ -553,82 +426,16 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
           }
           continue
         }
-
       }
 
       if (shouldScheduleWorkflowAutosave) {
-        this.scheduleWorkflowAutosave()
+        const workflowPersistenceStore = useWorkflowPersistenceStore()
+        workflowPersistenceStore.scheduleWorkflowAutosave()
       }
     },
 
     setSelectedNode(nodeId: string | null) {
       this.selectedNodeId = nodeId
-    },
-
-    runWorkflow() {
-      this.isExecuting = true
-      this.executionLog = []
-      this.nodeExecutionStateMap = new Map()
-      try {
-        const result = executeWorkflow(this.graphNodes, this.graphEdges)
-        this.executionLog = result.executionLog
-        this.nodeExecutionStateMap = result.nodeExecutionStateMap
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        this.executionLog = [
-          {
-            stepNumber: 0,
-            nodeId: 'SYSTEM',
-            nodeLabel: 'System Error',
-            nodeType: 'ERROR',
-            inputPayload: {},
-            outputPayload: {},
-            selectedPortId: null,
-            nextNodeId: null,
-            status: 'error',
-            errorMessage,
-            timestamp: Date.now(),
-          },
-        ]
-      } finally {
-        this.isExecuting = false
-      }
-    },
-
-    clearExecutionLog() {
-      this.executionLog = []
-      this.nodeExecutionStateMap = new Map()
-    },
-
-    exportWorkflow(): string {
-      return workNodeSerialization.serialise(this.graphNodes, this.graphEdges)
-    },
-
-    importWorkflow(jsonString: string): void {
-      try {
-        const { nodes, edges } = workNodeSerialization.deserialise(jsonString)
-        this.replaceGraphData(nodes, edges)
-        this.selectedNodeId = null
-        this.executionLog = []
-        this.nodeExecutionStateMap = new Map()
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        this.executionLog = [
-          {
-            stepNumber: 0,
-            nodeId: 'SYSTEM',
-            nodeLabel: 'Import Error',
-            nodeType: 'ERROR',
-            inputPayload: {},
-            outputPayload: {},
-            selectedPortId: null,
-            nextNodeId: null,
-            status: 'error',
-            errorMessage,
-            timestamp: Date.now(),
-          },
-        ]
-      }
     },
   },
 })

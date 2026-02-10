@@ -2,7 +2,7 @@
 import { VueFlow, useVueFlow } from "@vue-flow/core";
 import { Background } from "@vue-flow/background";
 import { Controls } from "@vue-flow/controls";
-import { useWorkflowCanvasStore } from "../stores/workflowCanvasStore";
+import { useWorkflowGraphStore } from "../stores/workflowGraphStore";
 import { getNodeDefinition } from "../registry/nodeRegistry";
 import { createWorkNode } from "../factory/workNodeFactory";
 import type { RenderWorkNode } from "../models/renderWorkNode";
@@ -18,20 +18,15 @@ import EndNodeRenderer from "./nodeRenderers/EndNodeRenderer.vue";
 import DeletableEdgeRenderer from "./edgeRenderers/DeletableEdgeRenderer.vue";
 import WorkflowMiniMapPanel from "./WorkflowMiniMapPanel.vue";
 
-const workflowStore = useWorkflowCanvasStore();
-const {
-  onConnect,
-  onNodeClick,
-  onNodesChange,
-  onEdgesChange,
-  project,
-} = useVueFlow({
-  nodes: workflowStore.nodes,
-  edges: workflowStore.edges,
-  minZoom: WORKFLOW_CONSTANTS.MIN_ZOOM,
-  maxZoom: WORKFLOW_CONSTANTS.MAX_ZOOM,
-  defaultZoom: WORKFLOW_CONSTANTS.DEFAULT_CANVAS_ZOOM,
-});
+const workflowGraphStore = useWorkflowGraphStore();
+const { onConnect, onNodeClick, onNodesChange, onEdgesChange, project } =
+  useVueFlow({
+    nodes: workflowGraphStore.nodes,
+    edges: workflowGraphStore.edges,
+    minZoom: WORKFLOW_CONSTANTS.MIN_ZOOM,
+    maxZoom: WORKFLOW_CONSTANTS.MAX_ZOOM,
+    defaultZoom: WORKFLOW_CONSTANTS.DEFAULT_CANVAS_ZOOM,
+  });
 
 let nodeIdCounter = 0;
 
@@ -75,7 +70,7 @@ function onDrop(event: DragEvent) {
     data: { workNode, portDefinition: definition.portDefinition },
   };
 
-  workflowStore.addNode(renderNode);
+  workflowGraphStore.addNode(renderNode);
 }
 
 // ─── Connection handler ──────────────────────────────────────────────
@@ -85,8 +80,8 @@ onConnect((connection: Connection) => {
     connection.source,
     connection.sourceHandle ?? "out-0",
     connection.target,
-    workflowStore.nodes,
-    workflowStore.edges,
+    workflowGraphStore.nodes,
+    workflowGraphStore.edges,
   );
   if (!isValid) return;
 
@@ -96,33 +91,33 @@ onConnect((connection: Connection) => {
     target: connection.target,
     sourceHandle: connection.sourceHandle,
   };
-  workflowStore.addEdge(edge);
+  workflowGraphStore.addEdge(edge);
 });
 
 onNodesChange((nodeChanges: NodeChange[]) => {
-  workflowStore.applyNodeChanges(nodeChanges);
+  workflowGraphStore.applyNodeChanges(nodeChanges);
 });
 
 onEdgesChange((edgeChanges: EdgeChange[]) => {
-  workflowStore.applyEdgeChanges(edgeChanges);
+  workflowGraphStore.applyEdgeChanges(edgeChanges);
 });
 
 // ─── Node click handler ─────────────────────────────────────────────
 
 onNodeClick(({ node }) => {
-  workflowStore.setSelectedNode(node.id);
+  workflowGraphStore.setSelectedNode(node.id);
 });
 
 function onPaneClick() {
-  workflowStore.setSelectedNode(null);
+  workflowGraphStore.setSelectedNode(null);
 }
 </script>
 
 <template>
   <div class="workflow-canvas" @dragover="onDragOver" @drop="onDrop">
     <VueFlow
-      :nodes="workflowStore.nodes"
-      :edges="workflowStore.edges"
+      :nodes="workflowGraphStore.nodes"
+      :edges="workflowGraphStore.edges"
       @pane-click="onPaneClick"
     >
       <template #node-START="nodeProps">

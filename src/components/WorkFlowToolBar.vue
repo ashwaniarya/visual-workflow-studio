@@ -1,21 +1,26 @@
 <script setup lang="ts">
-import { useWorkflowCanvasStore } from '../stores/workflowCanvasStore'
-import BaseTypography from './primitives/BaseTypography.vue'
-import BaseSurface from './primitives/BaseSurface.vue'
+import { useWorkflowGraphStore } from "../stores/workflowGraphStore";
+import BaseTypography from "./primitives/BaseTypography.vue";
+import BaseSurface from "./primitives/BaseSurface.vue";
 
-const workflowStore = useWorkflowCanvasStore()
-const nodeDefinitions = workflowStore.availableNodeDefinitions
+const workflowGraphStore = useWorkflowGraphStore();
+const nodeDefinitions = workflowGraphStore.availableNodeDefinitions;
 
 function onDragStart(event: DragEvent, nodeType: string) {
   if (event.dataTransfer) {
-    event.dataTransfer.setData('application/workflow-node-type', nodeType)
-    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData("application/workflow-node-type", nodeType);
+    event.dataTransfer.effectAllowed = "move";
   }
 }
 </script>
 
 <template>
-  <BaseSurface as="aside" variant="outlined" padding="large" class="workflow-toolbar">
+  <BaseSurface
+    as="aside"
+    variant="outlined"
+    padding="large"
+    class="workflow-toolbar"
+  >
     <BaseTypography as="h3" variant="headingSmall" class="toolbar-title">
       📦 Nodes
     </BaseTypography>
@@ -34,7 +39,12 @@ function onDragStart(event: DragEvent, nodeType: string) {
         <BaseTypography as="span" variant="body" class="toolbar-node-label">
           {{ definition.label }}
         </BaseTypography>
-        <BaseTypography as="span" variant="micro" tone="muted" class="toolbar-node-category">
+        <BaseTypography
+          as="span"
+          variant="micro"
+          tone="muted"
+          class="toolbar-node-category"
+        >
           {{ definition.category }}
         </BaseTypography>
       </BaseSurface>

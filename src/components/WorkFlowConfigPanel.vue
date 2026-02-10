@@ -1,60 +1,78 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useWorkflowCanvasStore } from '../stores/workflowCanvasStore'
-import BaseButton from './primitives/BaseButton.vue'
-import BaseInput from './primitives/BaseInput.vue'
-import BaseSurface from './primitives/BaseSurface.vue'
-import BaseTypography from './primitives/BaseTypography.vue'
-import WorkflowArrayConfigField from './workflowConfig/WorkflowArrayConfigField.vue'
-import WorkflowJsonConfigField from './workflowConfig/WorkflowJsonConfigField.vue'
+import { computed } from "vue";
+import { useWorkflowGraphStore } from "../stores/workflowGraphStore";
+import BaseButton from "./primitives/BaseButton.vue";
+import BaseInput from "./primitives/BaseInput.vue";
+import BaseSurface from "./primitives/BaseSurface.vue";
+import BaseTypography from "./primitives/BaseTypography.vue";
+import WorkflowArrayConfigField from "./workflowConfig/WorkflowArrayConfigField.vue";
+import WorkflowJsonConfigField from "./workflowConfig/WorkflowJsonConfigField.vue";
 
-const workflowStore = useWorkflowCanvasStore()
+const workflowGraphStore = useWorkflowGraphStore();
 
-const selectedNode = computed(() => workflowStore.selectedNode)
-const selectedNodeDefinition = computed(() => workflowStore.selectedNodeDefinition)
-const workNode = computed(() => selectedNode.value?.data?.workNode)
-const configSchema = computed(() => selectedNodeDefinition.value?.configSchema ?? [])
+const selectedNode = computed(() => workflowGraphStore.selectedNode);
+const selectedNodeDefinition = computed(
+  () => workflowGraphStore.selectedNodeDefinition,
+);
+const workNode = computed(() => selectedNode.value?.data?.workNode);
+const configSchema = computed(
+  () => selectedNodeDefinition.value?.configSchema ?? [],
+);
 
 function isFieldVisible(field: {
-  visibleWhen?: { field: string; in: unknown[] }
+  visibleWhen?: { field: string; in: unknown[] };
 }): boolean {
-  if (!field.visibleWhen || !workNode.value) return true
-  const dependentValue = workNode.value.config[field.visibleWhen.field]
-  return field.visibleWhen.in.includes(dependentValue)
+  if (!field.visibleWhen || !workNode.value) return true;
+  const dependentValue = workNode.value.config[field.visibleWhen.field];
+  return field.visibleWhen.in.includes(dependentValue);
 }
 
 function onFieldChange(key: string, value: unknown) {
-  if (!selectedNode.value) return
-  workflowStore.updateConfigOfNodeById(selectedNode.value.id, key, value)
+  if (!selectedNode.value) return;
+  workflowGraphStore.updateConfigOfNodeById(selectedNode.value.id, key, value);
 }
 
 function getStringFieldValue(fieldKey: string): string {
-  const value = workNode.value?.config[fieldKey]
-  return value == null ? '' : String(value)
+  const value = workNode.value?.config[fieldKey];
+  return value == null ? "" : String(value);
 }
 
 function getArrayEntries(key: string): Record<string, unknown>[] {
-  const rawValue = workNode.value?.config[key]
-  return Array.isArray(rawValue) ? (rawValue as Record<string, unknown>[]) : []
+  const rawValue = workNode.value?.config[key];
+  return Array.isArray(rawValue) ? (rawValue as Record<string, unknown>[]) : [];
 }
 </script>
 
 <template>
-  <BaseSurface as="aside" variant="outlined" padding="none" class="config-panel">
+  <BaseSurface
+    as="aside"
+    variant="outlined"
+    padding="none"
+    class="config-panel"
+  >
     <template v-if="selectedNode && workNode && selectedNodeDefinition">
       <div class="panel-header">
         <span class="panel-icon">{{ selectedNodeDefinition.icon }}</span>
         <BaseTypography as="h3" variant="headingSmall" class="panel-title">
           {{ selectedNodeDefinition.label }} Config
         </BaseTypography>
-        <BaseButton variant="ghost" size="small" @click="workflowStore.setSelectedNode(null)">
+        <BaseButton
+          variant="ghost"
+          size="small"
+          @click="workflowGraphStore.setSelectedNode(null)"
+        >
           ✕
         </BaseButton>
       </div>
 
       <div class="panel-body">
         <div class="field-group">
-          <BaseTypography as="label" variant="caption" tone="secondary" class="field-label">
+          <BaseTypography
+            as="label"
+            variant="caption"
+            tone="secondary"
+            class="field-label"
+          >
             Node ID
           </BaseTypography>
           <BaseInput :model-value="workNode.id" :is-disabled="true" />
@@ -62,7 +80,12 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
 
         <template v-for="field in configSchema" :key="field.key">
           <div v-if="isFieldVisible(field)" class="field-group">
-            <BaseTypography as="label" variant="caption" tone="secondary" class="field-label">
+            <BaseTypography
+              as="label"
+              variant="caption"
+              tone="secondary"
+              class="field-label"
+            >
               {{ field.label }}
             </BaseTypography>
 
@@ -87,7 +110,11 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
               :model-value="getStringFieldValue(field.key)"
               @update:model-value="onFieldChange(field.key, $event)"
             >
-              <option v-for="option in field.options" :key="option" :value="option">
+              <option
+                v-for="option in field.options"
+                :key="option"
+                :value="option"
+              >
                 {{ option }}
               </option>
             </BaseInput>
@@ -101,11 +128,19 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
               @update:model-value="onFieldChange(field.key, $event)"
             />
 
-            <label v-else-if="field.fieldType === 'checkbox'" class="field-checkbox">
+            <label
+              v-else-if="field.fieldType === 'checkbox'"
+              class="field-checkbox"
+            >
               <input
                 type="checkbox"
                 :checked="workNode.config[field.key] as boolean"
-                @change="onFieldChange(field.key, ($event.target as HTMLInputElement).checked)"
+                @change="
+                  onFieldChange(
+                    field.key,
+                    ($event.target as HTMLInputElement).checked,
+                  )
+                "
               />
               <BaseTypography as="span" variant="body">
                 {{ field.label }}

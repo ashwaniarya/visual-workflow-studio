@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { useWorkflowCanvasStore } from '../stores/workflowCanvasStore'
+import { useWorkflowExecutionStore } from '../stores/workflowExecutionStore'
 import type { NodeExecutionState } from '../engine/nodeExecutionState'
 
 // ─── Composable: Node Execution State ────────────────────────────────
@@ -7,10 +7,10 @@ import type { NodeExecutionState } from '../engine/nodeExecutionState'
 // Returns reactive executionState + helper CSS class string.
 
 export function useNodeExecutionState(nodeId: string) {
-  const workflowStore = useWorkflowCanvasStore()
+  const workflowExecutionStore = useWorkflowExecutionStore()
 
   const executionState = computed<NodeExecutionState | undefined>(() => {
-    return workflowStore.nodeExecutionStateMap.get(nodeId)
+    return workflowExecutionStore.nodeExecutionStateMap.get(nodeId)
   })
 
   const executionCssClass = computed<string>(() => {

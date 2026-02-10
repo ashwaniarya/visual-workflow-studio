@@ -2,7 +2,8 @@
 // Import registry to trigger built-in node registrations on app boot
 import "./registry/nodeRegistry";
 import { onMounted, onUnmounted } from "vue";
-import { useWorkflowCanvasStore } from "./stores/workflowCanvasStore";
+import { useWorkflowHistoryStore } from "./stores/workflowHistoryStore";
+import { useWorkflowPersistenceStore } from "./stores/workflowPersistenceStore";
 import { WORKFLOW_CONSTANTS } from "./config/workflowConstants";
 
 import AppHeader from "./components/AppHeader.vue";
@@ -11,7 +12,8 @@ import WorkFlowCanvas from "./components/WorkFlowCanvas.vue";
 import WorkFlowConfigPanel from "./components/WorkFlowConfigPanel.vue";
 import WorkFlowExecutionLog from "./components/WorkFlowExecutionLog.vue";
 
-const workflowCanvasStore = useWorkflowCanvasStore();
+const workflowHistoryStore = useWorkflowHistoryStore();
+const workflowPersistenceStore = useWorkflowPersistenceStore();
 
 function onGlobalWorkflowUndoRedoShortcut(keyboardEvent: KeyboardEvent) {
   const isModifierPressed = keyboardEvent.ctrlKey || keyboardEvent.metaKey;
@@ -23,19 +25,26 @@ function onGlobalWorkflowUndoRedoShortcut(keyboardEvent: KeyboardEvent) {
     keyboardEvent.key.toLowerCase() === "z" && !keyboardEvent.shiftKey;
   if (isUndoShortcut) {
     keyboardEvent.preventDefault();
-    workflowCanvasStore.undoLastUiAction();
+    workflowHistoryStore.undoLastUiAction({
+      onAutosaveRequested: () =>
+        workflowPersistenceStore.scheduleWorkflowAutosave(),
+    });
     return;
   }
 
   const isShiftRedoShortcut =
     keyboardEvent.key.toLowerCase() === "z" && keyboardEvent.shiftKey;
-  const isDefaultRedoShortcut = WORKFLOW_CONSTANTS.REDO_SHORTCUT_KEYS.includes(
-    keyboardEvent.key as (typeof WORKFLOW_CONSTANTS.REDO_SHORTCUT_KEYS)[number],
-  ) && keyboardEvent.key.toLowerCase() === "y";
+  const isDefaultRedoShortcut =
+    WORKFLOW_CONSTANTS.REDO_SHORTCUT_KEYS.includes(
+      keyboardEvent.key as (typeof WORKFLOW_CONSTANTS.REDO_SHORTCUT_KEYS)[number],
+    ) && keyboardEvent.key.toLowerCase() === "y";
 
   if (isShiftRedoShortcut || isDefaultRedoShortcut) {
     keyboardEvent.preventDefault();
-    workflowCanvasStore.redoLastUiAction();
+    workflowHistoryStore.redoLastUiAction({
+      onAutosaveRequested: () =>
+        workflowPersistenceStore.scheduleWorkflowAutosave(),
+    });
   }
 }
 
