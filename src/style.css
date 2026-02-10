@@ -1,45 +1,35 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html, body, #app {
-  height: 100%;
-  width: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #11111b;
-  color: #cdd6f4;
-  overflow: hidden;
-}
+@import './designSystem/tokens/semanticColorTokens.css';
+@import './designSystem/tokens/typographyScaleTokens.css';
+@import './designSystem/tokens/spacingScaleTokens.css';
+@import './designSystem/tokens/radiusAndElevationTokens.css';
+@import './designSystem/foundations/resetAndBaseStyles.css';
+@import './designSystem/foundations/responsiveLayoutPolicies.css';
 
 /* ─── Global Node Renderer Styles ─────────────────────────────────── */
 
 .node-renderer {
-  background: #1e1e2e;
-  border: 1px solid #313244;
-  border-radius: 8px;
-  padding: 8px 14px;
+  background: var(--color-surface-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-medium);
+  padding: var(--space-2) 14px;
   min-width: 160px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--elevation-level-1);
   transition: box-shadow 0.15s ease;
 }
 
 .node-renderer:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--elevation-level-2);
 }
 
 /* ─── Execution State Visual Feedback ────────────────────────────── */
 
 .node-execution-error {
-  border-color: #f38ba8 !important;
+  border-color: var(--color-danger-soft) !important;
   box-shadow: 0 0 12px rgba(243, 139, 168, 0.4);
 }
 
 .node-execution-success {
-  border-color: #a6e3a1 !important;
+  border-color: var(--color-success-primary) !important;
   box-shadow: 0 0 10px rgba(166, 227, 161, 0.25);
 }
 
@@ -49,22 +39,22 @@ html, body, #app {
   background: rgba(243, 139, 168, 0.15);
   border: 1px solid rgba(243, 139, 168, 0.3);
   border-radius: 4px;
-  font-size: 10px;
-  color: #f38ba8;
+  font-size: var(--font-size-caption);
+  color: var(--color-danger-soft);
   line-height: 1.4;
   word-break: break-word;
 }
 
 .node-header {
-  font-size: 12px;
-  font-weight: 700;
-  color: #cdd6f4;
+  font-size: var(--font-size-body-small);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
   margin-bottom: 4px;
 }
 
 .node-body {
-  font-size: 11px;
-  color: #a6adc8;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-secondary);
 }
 
 .node-preview {
@@ -82,15 +72,15 @@ html, body, #app {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 2px solid #313244;
+  border: 2px solid var(--color-border-default);
 }
 
 .handle-source {
-  background: #89b4fa;
+  background: var(--color-accent-primary);
 }
 
 .handle-target {
-  background: #a6adc8;
+  background: var(--color-text-secondary);
 }
 
 /* ─── Scrollbar Styles ────────────────────────────────────────────── */
@@ -105,10 +95,10 @@ html, body, #app {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #313244;
+  background: var(--color-border-default);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #45475a;
+  background: var(--color-border-strong);
 }

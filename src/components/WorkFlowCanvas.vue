@@ -6,7 +6,7 @@ import { useWorkflowCanvasStore } from "../stores/workflowCanvasStore";
 import { getNodeDefinition } from "../registry/nodeRegistry";
 import { createWorkNode } from "../factory/workNodeFactory";
 import type { RenderWorkNode } from "../models/renderWorkNode";
-import type { Connection, Edge } from "@vue-flow/core";
+import type { Connection, Edge, EdgeChange, NodeChange } from "@vue-flow/core";
 import { canConnect } from "../engine/workflowEngine";
 import { WORKFLOW_CONSTANTS } from "../config/workflowConstants";
 
@@ -18,7 +18,7 @@ import EndNodeRenderer from "./nodeRenderers/EndNodeRenderer.vue";
 import DeletableEdgeRenderer from "./edgeRenderers/DeletableEdgeRenderer.vue";
 
 const workflowStore = useWorkflowCanvasStore();
-const { onConnect, onNodeClick, onNodeDragStop, project } = useVueFlow({
+const { onConnect, onNodeClick, onNodesChange, onEdgesChange, project } = useVueFlow({
   nodes: workflowStore.nodes,
   edges: workflowStore.edges,
   minZoom: WORKFLOW_CONSTANTS.MIN_ZOOM,
@@ -93,13 +93,12 @@ onConnect((connection: Connection) => {
   workflowStore.addEdge(edge);
 });
 
-// ─── Node drag stop handler ──────────────────────────────────────────
+onNodesChange((nodeChanges: NodeChange[]) => {
+  workflowStore.applyNodeChanges(nodeChanges);
+});
 
-onNodeDragStop(({ node }) => {
-  workflowStore.updatePositionOfNodeById(node.id, {
-    x: node.position.x,
-    y: node.position.y,
-  });
+onEdgesChange((edgeChanges: EdgeChange[]) => {
+  workflowStore.applyEdgeChanges(edgeChanges);
 });
 
 // ─── Node click handler ─────────────────────────────────────────────
@@ -121,23 +120,32 @@ function onPaneClick() {
       @pane-click="onPaneClick"
     >
       <template #node-START="nodeProps">
-        <StartNodeRenderer v-bind="nodeProps" />
+        <StartNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
       </template>
       <template #node-TRANSFORM="nodeProps">
-        <TransformNodeRenderer v-bind="nodeProps" />
+        <TransformNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
       </template>
       <template #node-DECISION="nodeProps">
-        <DecisionNodeRenderer v-bind="nodeProps" />
+        <DecisionNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
       </template>
       <template #node-SWITCH="nodeProps">
-        <SwitchNodeRenderer v-bind="nodeProps" />
+        <SwitchNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
       </template>
       <template #node-END="nodeProps">
-        <EndNodeRenderer v-bind="nodeProps" />
+        <EndNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
       </template>
 
       <template #edge-DELETABLE="edgeProps">
-        <DeletableEdgeRenderer v-bind="edgeProps" />
+        <DeletableEdgeRenderer
+          :id="edgeProps.id"
+          :source-x="edgeProps.sourceX"
+          :source-y="edgeProps.sourceY"
+          :target-x="edgeProps.targetX"
+          :target-y="edgeProps.targetY"
+          :source-position="edgeProps.sourcePosition"
+          :target-position="edgeProps.targetPosition"
+          :marker-end="edgeProps.markerEnd"
+        />
       </template>
 
       <Background />

@@ -1,0 +1,9 @@
+:root {
+  --radius-small: 0.375rem;
+  --radius-medium: 0.5rem;
+  --radius-large: 0.75rem;
+
+  --elevation-level-0: none;
+  --elevation-level-1: 0 2px 8px rgba(0, 0, 0, 0.18);
+  --elevation-level-2: 0 8px 24px rgba(0, 0, 0, 0.24);
+}

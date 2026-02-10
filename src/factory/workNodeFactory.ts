@@ -1,24 +1,25 @@
 import type { BaseWorkNode } from '../models/baseWorkNode'
 import type { NodeDefinition } from '../registry/nodeRegistry'
-import { StartWorkNode } from '../models/nodes/startWorkNode'
-import { TransformWorkNode } from '../models/nodes/transformWorkNode'
-import { DecisionWorkNode } from '../models/nodes/decisionWorkNode'
-import { SwitchWorkNode } from '../models/nodes/switchWorkNode'
-import { EndWorkNode } from '../models/nodes/endWorkNode'
+import type { NodeExecutor } from '../engine/executors/nodeExecutor'
+
+class RegistryResolvedWorkNode {
+  readonly id: string
+  readonly type: string
+  readonly config: Record<string, unknown>
+  private readonly nodeDefinition: NodeDefinition
+
+  constructor(id: string, nodeDefinition: NodeDefinition) {
+    this.id = id
+    this.type = nodeDefinition.type
+    this.config = { ...nodeDefinition.defaultConfig }
+    this.nodeDefinition = nodeDefinition
+  }
+
+  getExecutor(): NodeExecutor {
+    return this.nodeDefinition.executorResolver(this.config)
+  }
+}
 
 export function createWorkNode(id: string, definition: NodeDefinition): BaseWorkNode {
-  switch (definition.type) {
-    case 'START':
-      return new StartWorkNode(id, definition.type, definition.defaultConfig)
-    case 'TRANSFORM':
-      return new TransformWorkNode(id, definition.type, definition.defaultConfig)
-    case 'DECISION':
-      return new DecisionWorkNode(id, definition.type, definition.defaultConfig)
-    case 'SWITCH':
-      return new SwitchWorkNode(id, definition.type, definition.defaultConfig)
-    case 'END':
-      return new EndWorkNode(id, definition.type, definition.defaultConfig)
-    default:
-      throw new Error(`Unknown node type: ${definition.type}`)
-  }
+  return new RegistryResolvedWorkNode(id, definition)
 }

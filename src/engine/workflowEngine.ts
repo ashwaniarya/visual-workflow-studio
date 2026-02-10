@@ -24,8 +24,8 @@ export function canConnect(
   sourceNodeId: string,
   sourcePortId: string,
   targetNodeId: string,
-  nodes: RenderWorkNode[],
-  edges: Edge[],
+  nodes: ReadonlyArray<RenderWorkNode>,
+  edges: ReadonlyArray<Edge>,
 ): boolean {
   if (!WORKFLOW_CONSTANTS.EDGE_VALIDATION_ENABLED) {
     return true
@@ -88,8 +88,8 @@ export function canConnect(
 // ─── DAG Builder ─────────────────────────────────────────────────────
 
 export function buildWorkflow(
-  nodes: RenderWorkNode[],
-  edges: Edge[],
+  nodes: ReadonlyArray<RenderWorkNode>,
+  edges: ReadonlyArray<Edge>,
 ): AdjacencyMap {
   const adjacency: AdjacencyMap = new Map()
 
@@ -129,8 +129,8 @@ export function buildWorkflow(
 // ─── Workflow Executor ───────────────────────────────────────────────
 
 export function executeWorkflow(
-  nodes: RenderWorkNode[],
-  edges: Edge[],
+  nodes: ReadonlyArray<RenderWorkNode>,
+  edges: ReadonlyArray<Edge>,
 ): WorkflowExecutionResult {
   const adjacency = buildWorkflow(nodes, edges)
   const nodeExecutionStateMap: NodeExecutionStateMap = new Map()

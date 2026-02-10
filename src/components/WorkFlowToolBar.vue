@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useWorkflowCanvasStore } from '../stores/workflowCanvasStore'
+import BaseTypography from './primitives/BaseTypography.vue'
+import BaseSurface from './primitives/BaseSurface.vue'
 
 const workflowStore = useWorkflowCanvasStore()
 const nodeDefinitions = workflowStore.availableNodeDefinitions
@@ -13,67 +15,71 @@ function onDragStart(event: DragEvent, nodeType: string) {
 </script>
 
 <template>
-  <aside class="workflow-toolbar">
-    <h3 class="toolbar-title">📦 Nodes</h3>
+  <BaseSurface as="aside" variant="outlined" padding="large" class="workflow-toolbar">
+    <BaseTypography as="h3" variant="headingSmall" class="toolbar-title">
+      📦 Nodes
+    </BaseTypography>
     <div class="toolbar-node-list">
-      <div
+      <BaseSurface
         v-for="definition in nodeDefinitions"
         :key="definition.type"
+        as="div"
+        variant="outlined"
+        padding="medium"
         class="toolbar-node-item"
         draggable="true"
         @dragstart="onDragStart($event, definition.type)"
       >
         <span class="toolbar-node-icon">{{ definition.icon }}</span>
-        <span class="toolbar-node-label">{{ definition.label }}</span>
-        <span class="toolbar-node-category">{{ definition.category }}</span>
-      </div>
+        <BaseTypography as="span" variant="body" class="toolbar-node-label">
+          {{ definition.label }}
+        </BaseTypography>
+        <BaseTypography as="span" variant="micro" tone="muted" class="toolbar-node-category">
+          {{ definition.category }}
+        </BaseTypography>
+      </BaseSurface>
     </div>
-  </aside>
+  </BaseSurface>
 </template>
 
 <style scoped>
 .workflow-toolbar {
   width: 200px;
-  background: #1e1e2e;
-  border-right: 1px solid #313244;
-  padding: 16px 12px;
+  border-radius: 0;
+  border-top: none;
+  border-left: none;
+  border-bottom: none;
+  padding: var(--space-4) var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   overflow-y: auto;
 }
 
 .toolbar-title {
-  color: #cdd6f4;
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #313244;
+  margin: 0 0 var(--space-2) 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-default);
 }
 
 .toolbar-node-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .toolbar-node-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: #181825;
-  border: 1px solid #313244;
-  border-radius: 8px;
+  gap: var(--space-2);
+  min-height: 46px;
   cursor: grab;
   transition: all 0.15s ease;
   user-select: none;
 }
 
 .toolbar-node-item:hover {
-  background: #313244;
-  border-color: #585b70;
+  border-color: var(--color-border-strong);
   transform: translateX(2px);
 }
 
@@ -86,15 +92,31 @@ function onDragStart(event: DragEvent, nodeType: string) {
 }
 
 .toolbar-node-label {
-  color: #cdd6f4;
-  font-size: 13px;
-  font-weight: 500;
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .toolbar-node-category {
-  color: #6c7086;
-  font-size: 10px;
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1023px) {
+  .workflow-toolbar {
+    width: 170px;
+  }
+}
+
+@media (max-width: 767px) {
+  .workflow-toolbar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border-default);
+    max-height: 180px;
+  }
 }
 </style>

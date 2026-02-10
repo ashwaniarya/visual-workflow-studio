@@ -1,0 +1,14 @@
+:root {
+  --breakpoint-mobile-maximum-width: 767px;
+  --breakpoint-tablet-maximum-width: 1023px;
+}
+
+.responsive-hide-on-mobile {
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .responsive-hide-on-mobile {
+    display: none !important;
+  }
+}

@@ -2,7 +2,7 @@
 // Import registry to trigger built-in node registrations on app boot
 import "./registry/nodeRegistry";
 
-import AppHeader from "./components/ui/AppHeader.vue";
+import AppHeader from "./components/AppHeader.vue";
 import WorkFlowToolBar from "./components/WorkFlowToolBar.vue";
 import WorkFlowCanvas from "./components/WorkFlowCanvas.vue";
 import WorkFlowConfigPanel from "./components/WorkFlowConfigPanel.vue";
@@ -30,7 +30,7 @@ import WorkFlowExecutionLog from "./components/WorkFlowExecutionLog.vue";
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background: #11111b;
+  background: var(--color-background-primary);
 }
 
 .app-body {
@@ -44,5 +44,11 @@ import WorkFlowExecutionLog from "./components/WorkFlowExecutionLog.vue";
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+@media (max-width: 767px) {
+  .app-body {
+    flex-direction: column;
+  }
 }
 </style>

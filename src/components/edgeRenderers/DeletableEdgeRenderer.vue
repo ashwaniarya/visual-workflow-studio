@@ -7,7 +7,19 @@ import {
 } from "@vue-flow/core";
 import { useWorkflowCanvasStore } from "../../stores/workflowCanvasStore";
 
-const props = defineProps<EdgeProps>();
+type DeletableEdgeRendererProps = Pick<
+  EdgeProps,
+  | "id"
+  | "sourceX"
+  | "sourceY"
+  | "targetX"
+  | "targetY"
+  | "sourcePosition"
+  | "targetPosition"
+  | "markerEnd"
+>;
+
+const props = defineProps<DeletableEdgeRendererProps>();
 
 const workflowStore = useWorkflowCanvasStore();
 
