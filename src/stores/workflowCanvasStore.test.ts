@@ -247,7 +247,7 @@ describe('workflowCanvasStore selective graph updates', () => {
     expect(undoCount).toBe(WORKFLOW_CONSTANTS.MAX_UNDO_REDO_HISTORY_STEPS)
   })
 
-  it('undoes and redoes node move command with explicit positions', () => {
+  it('updates node position without recording undo history', () => {
     const workflowCanvasStore = useWorkflowCanvasStore()
     const startNode = createRenderNode('start-node', 'START')
     workflowCanvasStore.addNode(startNode, { shouldAutosave: false })
@@ -263,23 +263,11 @@ describe('workflowCanvasStore selective graph updates', () => {
       x: 180,
       y: 260,
     })
-
-    const hasUndoApplied = workflowCanvasStore.undoLastUiAction({ shouldAutosave: false })
-    expect(hasUndoApplied).toBe(true)
-    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
-      x: 0,
-      y: 0,
-    })
-
-    const hasRedoApplied = workflowCanvasStore.redoLastUiAction({ shouldAutosave: false })
-    expect(hasRedoApplied).toBe(true)
-    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
-      x: 180,
-      y: 260,
-    })
+    expect(workflowCanvasStore.canUndoUiAction).toBe(false)
+    expect(workflowCanvasStore.undoLastUiAction({ shouldAutosave: false })).toBe(false)
   })
 
-  it('does not push history for no-op move command', () => {
+  it('does not push history for no-op move update', () => {
     const workflowCanvasStore = useWorkflowCanvasStore()
     const startNode = createRenderNode('start-node', 'START')
     workflowCanvasStore.addNode(startNode, { shouldAutosave: false })
@@ -294,39 +282,5 @@ describe('workflowCanvasStore selective graph updates', () => {
     expect(hasMoveApplied).toBe(false)
     expect(workflowCanvasStore.canUndoUiAction).toBe(false)
     expect(workflowCanvasStore.undoCommandDepth).toBe(0)
-  })
-
-  it('records move command from explicit drag boundary positions', () => {
-    const workflowCanvasStore = useWorkflowCanvasStore()
-    const startNode = createRenderNode('start-node', 'START')
-    workflowCanvasStore.addNode(startNode, { shouldAutosave: false })
-    workflowCanvasStore.clearUiCommandHistory()
-
-    workflowCanvasStore.applyMoveNodePrimitive('start-node', { x: 180, y: 260 })
-    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
-      x: 180,
-      y: 260,
-    })
-
-    const hasMoveRecorded = workflowCanvasStore.recordNodeMoveByBoundaryPositions(
-      'start-node',
-      { x: 0, y: 0 },
-      { x: 180, y: 260 },
-      { shouldAutosave: false },
-    )
-    expect(hasMoveRecorded).toBe(true)
-    expect(workflowCanvasStore.canUndoUiAction).toBe(true)
-
-    workflowCanvasStore.undoLastUiAction({ shouldAutosave: false })
-    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
-      x: 0,
-      y: 0,
-    })
-
-    workflowCanvasStore.redoLastUiAction({ shouldAutosave: false })
-    expect(workflowCanvasStore.nodeById.get('start-node')?.position).toEqual({
-      x: 180,
-      y: 260,
-    })
   })
 })

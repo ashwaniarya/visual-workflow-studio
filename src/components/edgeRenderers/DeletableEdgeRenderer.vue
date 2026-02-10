@@ -24,6 +24,7 @@ const props = defineProps<DeletableEdgeRendererProps>();
 const workflowStore = useWorkflowCanvasStore();
 
 const isEdgeHovered = ref(false);
+const isWorkflowExecutionInProgress = computed(() => workflowStore.isExecuting);
 
 const edgePath = computed(() => {
   return getBezierPath({
@@ -56,7 +57,7 @@ function handleDeleteEdge() {
     @mouseleave="isEdgeHovered = false"
   />
 
-  <!-- Visible animated edge path -->
+  <!-- Visible edge path (animates only during execution) -->
   <path
     :d="path"
     fill="none"
@@ -64,7 +65,10 @@ function handleDeleteEdge() {
     :stroke-width="1.5"
     :marker-end="markerEnd"
     class="vue-flow__edge-path"
-    :class="{ 'edge-hovered': isEdgeHovered }"
+    :class="{
+      'edge-hovered': isEdgeHovered,
+      'edge-execution-animated': isWorkflowExecutionInProgress,
+    }"
     style="pointer-events: none"
   />
 
@@ -96,6 +100,17 @@ function handleDeleteEdge() {
 
 .edge-hovered {
   stroke: #f38ba8 !important;
+}
+
+.edge-execution-animated {
+  stroke-dasharray: 6 4;
+  animation: execution-edge-flow 0.8s linear infinite;
+}
+
+@keyframes execution-edge-flow {
+  to {
+    stroke-dashoffset: -10;
+  }
 }
 
 .edge-delete-button-container {

@@ -24,8 +24,6 @@ const {
   onNodeClick,
   onNodesChange,
   onEdgesChange,
-  onNodeDragStart,
-  onNodeDragStop,
   project,
 } = useVueFlow({
   nodes: workflowStore.nodes,
@@ -36,7 +34,6 @@ const {
 });
 
 let nodeIdCounter = 0;
-const dragStartPositionByNodeId = new Map<string, { x: number; y: number }>();
 
 function generateNodeId(): string {
   nodeIdCounter++;
@@ -98,7 +95,6 @@ onConnect((connection: Connection) => {
     source: connection.source,
     target: connection.target,
     sourceHandle: connection.sourceHandle,
-    animated: true,
   };
   workflowStore.addEdge(edge);
 });
@@ -109,39 +105,6 @@ onNodesChange((nodeChanges: NodeChange[]) => {
 
 onEdgesChange((edgeChanges: EdgeChange[]) => {
   workflowStore.applyEdgeChanges(edgeChanges);
-});
-
-onNodeDragStart(({ node }) => {
-  dragStartPositionByNodeId.set(node.id, {
-    x: node.position.x,
-    y: node.position.y,
-  });
-});
-
-onNodeDragStop(({ node }) => {
-  const dragStartPosition = dragStartPositionByNodeId.get(node.id);
-  dragStartPositionByNodeId.delete(node.id);
-  if (!dragStartPosition) {
-    return;
-  }
-
-  const dragEndPosition = {
-    x: node.position.x,
-    y: node.position.y,
-  };
-  const hasNodePositionChanged =
-    dragStartPosition.x !== dragEndPosition.x ||
-    dragStartPosition.y !== dragEndPosition.y;
-
-  if (!hasNodePositionChanged) {
-    return;
-  }
-
-  workflowStore.recordNodeMoveByBoundaryPositions(
-    node.id,
-    dragStartPosition,
-    dragEndPosition,
-  );
 });
 
 // ─── Node click handler ─────────────────────────────────────────────

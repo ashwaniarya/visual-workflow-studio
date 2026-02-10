@@ -12,7 +12,6 @@ import { WorkflowCommandHistory } from './helpers/workflowCommandHistory'
 import {
   createAddEdgeCommand,
   createAddNodeCommand,
-  createMoveNodeCommand,
   createRemoveEdgeCommand,
   createRemoveNodeCommand,
   createUpdateNodeConfigCommand,
@@ -412,37 +411,31 @@ export const useWorkflowCanvasStore = defineStore('workflowCanvas', {
       if (!node) {
         return false
       }
-      return this.recordNodeMoveByBoundaryPositions(
-        nodeId,
-        { x: node.position.x, y: node.position.y },
-        position,
-        options,
-      )
-    },
-
-    recordNodeMoveByBoundaryPositions(
-      nodeId: string,
-      beforePosition: NodeCanvasPosition,
-      afterPosition: NodeCanvasPosition,
-      options?: { shouldAutosave?: boolean },
-    ): boolean {
-      if (!this.nodeById.has(nodeId)) {
+      const hasNodePositionChanged =
+        node.position.x !== position.x ||
+        node.position.y !== position.y
+      if (!hasNodePositionChanged) {
         return false
       }
-      const moveNodeCommand = createMoveNodeCommand({
-        nodeId,
-        beforePosition,
-        afterPosition,
-        applyMoveNodePrimitive: (candidateNodeId, candidatePosition) =>
-          this.applyMoveNodePrimitive(candidateNodeId, candidatePosition),
-      })
-      return this.runUiCommand(moveNodeCommand, options)
+      const hasNodePositionBeenUpdated = this.applyMoveNodePrimitive(nodeId, position)
+      if (hasNodePositionBeenUpdated && options?.shouldAutosave !== false) {
+        this.scheduleWorkflowAutosave()
+      }
+      return hasNodePositionBeenUpdated
     },
 
     applyNodeChanges(nodeChanges: NodeChange[]) {
       let shouldScheduleWorkflowAutosave = false
 
       for (const nodeChange of nodeChanges) {
+        if (nodeChange.type === 'position' && nodeChange.position) {
+          this.applyMoveNodePrimitive(nodeChange.id, {
+            x: nodeChange.position.x,
+            y: nodeChange.position.y,
+          })
+          continue
+        }
+
         if (nodeChange.type === 'remove') {
           const hasNodeBeenRemoved = this.removeNode(nodeChange.id, { shouldAutosave: false })
           if (hasNodeBeenRemoved) {
