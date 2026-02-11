@@ -6,6 +6,16 @@ Today the built-in node types are `START`, `TRANSFORM`, `DECISION`, `SWITCH`, an
 
 <img width="959" height="473" alt="image" src="https://github.com/user-attachments/assets/b7f6b187-e900-4567-a9c4-f75ea3e00cc8" />
 
+### Demo Videos
+
+Setup Video
+
+Dashboard Demo
+
+- **PART 1** https://www.loom.com/share/2cf98d59da244de5b78aed8bfb6f20df
+- **PART 2** https://www.loom.com/share/e50192f0a13d4fb5b0aa6ba413dde320
+- **PART 3** https://www.loom.com/share/c8e8a234f05644438610b043a157a918
+
 # Setup
 
 ## Prerequisites
