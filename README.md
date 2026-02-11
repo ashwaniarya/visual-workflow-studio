@@ -4,6 +4,9 @@ Visual Workflow Studio is a visual DAG editor built with Vue 3 and TypeScript. Y
 
 Today the built-in node types are `START`, `TRANSFORM`, `DECISION`, `SWITCH`, and `END`. The execution engine moves through the graph by following the output port selected by each node executor. Workflows can be exported/imported as JSON, and canvas state is autosaved locally.
 
+<img width="959" height="473" alt="image" src="https://github.com/user-attachments/assets/b7f6b187-e900-4567-a9c4-f75ea3e00cc8" />
+
+
 # Setup
 
 ## Prerequisites
