@@ -1,20 +1,41 @@
 <script setup lang="ts">
 // Import registry to trigger built-in node registrations on app boot
 import "./registry/nodeRegistry";
-import { onMounted, onUnmounted } from "vue";
+import { defineAsyncComponent, onMounted, onUnmounted } from "vue";
 import { useWorkflowHistoryStore } from "./stores/workflowHistoryStore";
 import { useWorkflowPersistenceStore } from "./stores/workflowPersistenceStore";
 import { WORKFLOW_CONSTANTS } from "./config/workflowConstants";
 
 import AppHeader from "./components/AppHeader.vue";
 import WorkFlowToolBar from "./components/WorkFlowToolBar.vue";
-import WorkFlowCanvas from "./components/WorkFlowCanvas.vue";
 import WorkFlowConfigPanel from "./components/WorkFlowConfigPanel.vue";
 import WorkFlowExecutionLog from "./components/WorkFlowExecutionLog.vue";
 import GlobalActionModal from "./components/GlobalActionModal.vue";
+import { HEAVY_COMPONENT_SPLIT_POLICY } from "./config/componentPerformanceConfig";
 
 const workflowHistoryStore = useWorkflowHistoryStore();
 const workflowPersistenceStore = useWorkflowPersistenceStore();
+const workFlowCanvasSplitPolicy =
+  HEAVY_COMPONENT_SPLIT_POLICY.workflowCanvas;
+
+const AsyncWorkFlowCanvasRenderer = defineAsyncComponent({
+  loader: () =>
+    import(
+      /* webpackChunkName: "workflow-canvas-chunk" */
+      "./components/WorkFlowCanvas.vue"
+    ),
+  delay: workFlowCanvasSplitPolicy.fallbackDisplayDelayMilliseconds,
+  timeout: workFlowCanvasSplitPolicy.loadTimeoutMilliseconds,
+  onError(error, _retry, fail, attempts) {
+    console.error(
+      "WorkFlowCanvas chunk failed to load after",
+      attempts,
+      "attempt(s)",
+      error,
+    );
+    fail();
+  },
+});
 
 function onGlobalWorkflowUndoRedoShortcut(keyboardEvent: KeyboardEvent) {
   const isModifierPressed = keyboardEvent.ctrlKey || keyboardEvent.metaKey;
@@ -61,14 +82,27 @@ onUnmounted(() => {
 <template>
   <div class="app-layout">
     <AppHeader />
-    <div class="app-body">
-      <WorkFlowToolBar />
-      <div class="app-center">
-        <WorkFlowCanvas />
-        <WorkFlowExecutionLog />
-      </div>
-      <WorkFlowConfigPanel />
+  <div class="app-body">
+    <WorkFlowToolBar />
+    <div class="app-center">
+      <Suspense>
+        <template #default>
+          <AsyncWorkFlowCanvasRenderer />
+        </template>
+        <template #fallback>
+          <div
+            class="workflow-canvas-loading"
+            role="status"
+            aria-live="polite"
+          >
+            Loading workflow canvas…
+          </div>
+        </template>
+      </Suspense>
+      <WorkFlowExecutionLog />
     </div>
+    <WorkFlowConfigPanel />
+  </div>
     <GlobalActionModal />
   </div>
 </template>
@@ -94,6 +128,15 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.workflow-canvas-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 767px) {
