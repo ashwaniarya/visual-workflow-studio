@@ -10,6 +10,8 @@ Today the built-in node types are `START`, `TRANSFORM`, `DECISION`, `SWITCH`, an
 
 Setup Video
 
+https://www.loom.com/share/7d1827e242b14904b1f4dcfeb0f828f0
+
 Dashboard Demo
 
 - **PART 1** https://www.loom.com/share/2cf98d59da244de5b78aed8bfb6f20df
@@ -37,6 +39,21 @@ npm run build
 npm run preview
 npm run test
 ```
+
+# Tech Stack
+
+## Frontend Tooling
+
+- **Vite Dev Server and Bundler** drives the fast HMR loop, asset hashing, and production build output that powers the development studio interface.
+- **Vitest** provides lightweight unit testing for stores, helpers, and the engine so rapid feedback covers core graph behaviors.
+- **Linting + Formatting (ESLint + Prettier)** enforce shared rules across `.ts`/`.vue` files and keep IDE snapshots in sync with the team style guide.
+
+## Major Libraries
+
+- **Vue 3** is the UI framework for declarative rendering, composition API helpers, and concurrent-friendly reactivity on the canvas layer.
+- **Pinia** manages store boundaries so graph state, history, persistence, execution, and UI concerns remain isolated yet easy to compose.
+- **Vue Flow helpers** (used through helpers like `applyNodeChanges`) keep canvas interactions performant by reusing identity-preserving change streams.
+- **Centralized Policy Flags** are grouped under `WORKFLOW_CONSTANTS` in `src/config/workflowConstants.ts`, so every timeout interval, retry count, or autosave debounce is controlled through a single central flag set.
 
 # Architecture
 
