@@ -6,6 +6,7 @@ import type { OutputPortDefinition } from '../models/ports'
 import type { NodeExecutor } from './executors/nodeExecutor'
 import type { WorkflowExecutionResult, NodeExecutionStateMap } from './nodeExecutionState'
 import { NodeExecutionError } from './errors/nodeExecutionError'
+import { resolveNodeExecutor } from './nodeExecutorResolver'
 import { getNodeDefinition } from '../registry/nodeRegistry'
 import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
 
@@ -170,7 +171,7 @@ export function executeWorkflow(
     const snapshotInput = structuredClone(context.payload)
 
     // Execute the node
-    const executor: NodeExecutor = workNode.getExecutor()
+    const executor: NodeExecutor = resolveNodeExecutor(workNode, currentNode.id)
     let selectedPort: OutputPortDefinition | null = null
     let executionStatus: 'success' | 'error' = 'success'
     let errorMessage: string | undefined

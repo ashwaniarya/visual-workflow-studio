@@ -81,6 +81,28 @@ Project structure and key components:
 - [`src/config/workflowConstants.ts`](src/config/workflowConstants.ts)
   - centralized limits and policy flags.
 
+## How Workflow Engine Works
+
+`workflowEngine` runs as a deterministic traversal loop over the current graph snapshot.
+
+1. Build adjacency from nodes and edges after basic graph validation.
+2. Start from the single `START` node and carry one mutable execution context.
+3. For each node, resolve executor at runtime via registry (`nodeType + config`).
+4. Execute node, capture log entry + per-node status, and pick next edge from selected output port.
+5. Stop when no next node exists or when an execution error is captured.
+
+```mermaid
+flowchart LR
+  graphSnapshot[GraphSnapshot] --> validationStep[BuildAndValidateDAG]
+  validationStep --> startNode[FindStartNode]
+  startNode --> executionLoop[ExecutionLoop]
+  executionLoop --> runtimeResolver[ResolveExecutorFromRegistry]
+  runtimeResolver --> executeNode[ExecuteNode]
+  executeNode --> logState[WriteLogAndNodeState]
+  logState --> nextNode[ResolveNextNodeFromSelectedPort]
+  nextNode --> executionLoop
+```
+
 # UI Component Design and Minimal Design System
 
 The UI follows layered composition so behavior and presentation can evolve without rewriting the complete workflow surface.
@@ -146,7 +168,9 @@ sequenceDiagram
   Canvas->>Factory: createWorkNode(id, definition)
   Canvas->>Graph: addNode(renderWorkNode)
   Graph->>Engine: executeWorkflow(nodes, edges)
-  Engine->>Engine: getExecutor().execute()
+  Engine->>Registry: getNodeDefinition(workNode.type)
+  Engine->>Registry: executorResolver(workNode.config)
+  Engine->>Engine: execute(selectedNodeExecutor)
   Engine->>Graph: executionLogAndNodeStateMap
 ```
 
@@ -156,7 +180,8 @@ Runtime flow function links:
 - [`createWorkNode(id, definition)`](src/factory/workNodeFactory.ts)
 - [`addNode(renderWorkNode)`](src/stores/workflowGraphStore.ts)
 - [`executeWorkflow(nodes, edges)`](src/engine/workflowEngine.ts)
-- [`getExecutor().execute()`](src/factory/workNodeFactory.ts)
+- [`resolveNodeExecutor(workNode, nodeId)`](src/engine/nodeExecutorResolver.ts)
+- [`executorResolver(config)`](src/registry/nodeRegistry.ts)
 
 ### How node generation works
 

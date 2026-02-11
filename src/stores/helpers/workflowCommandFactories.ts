@@ -1,5 +1,8 @@
 import type { Edge } from '@vue-flow/core'
 import type { RenderWorkNode } from '../../models/renderWorkNode'
+import type { PortDefinition } from '../../models/ports'
+import { createWorkNode } from '../../factory/workNodeFactory'
+import { getNodeDefinition } from '../../registry/nodeRegistry'
 import type { WorkflowCommand } from './workflowCommandHistory'
 
 export interface NodeCanvasPosition {
@@ -8,6 +11,22 @@ export interface NodeCanvasPosition {
 }
 
 export type NodeConfigSnapshot = Record<string, unknown>
+
+interface WorkNodeSnapshot {
+  id: string
+  type: string
+  config: NodeConfigSnapshot
+}
+
+interface RenderWorkNodeSnapshot {
+  id: string
+  type: string
+  position: NodeCanvasPosition
+  data: {
+    workNode: WorkNodeSnapshot
+    portDefinition: PortDefinition
+  }
+}
 
 interface AddNodeCommandDependencies {
   renderNode: RenderWorkNode
@@ -57,8 +76,56 @@ function deepCloneJsonCompatibleValue<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-function cloneRenderNode(renderNode: RenderWorkNode): RenderWorkNode {
-  return deepCloneJsonCompatibleValue(renderNode)
+function snapshotRenderWorkNode(renderNode: RenderWorkNode): RenderWorkNodeSnapshot {
+  const workNode = renderNode.data?.workNode
+  const portDefinition = renderNode.data?.portDefinition
+  if (!workNode || !portDefinition) {
+    throw new Error(`Node "${renderNode.id}" is missing workNode data for history snapshot`)
+  }
+
+  const renderNodeType = typeof renderNode.type === 'string' ? renderNode.type : workNode.type
+
+  return {
+    id: renderNode.id,
+    type: renderNodeType,
+    position: {
+      x: renderNode.position.x,
+      y: renderNode.position.y,
+    },
+    data: {
+      workNode: {
+        id: workNode.id,
+        type: workNode.type,
+        config: deepCloneJsonCompatibleValue(workNode.config),
+      },
+      portDefinition: deepCloneJsonCompatibleValue(portDefinition),
+    },
+  }
+}
+
+function restoreRenderWorkNodeFromSnapshot(
+  renderWorkNodeSnapshot: RenderWorkNodeSnapshot,
+): RenderWorkNode {
+  const nodeDefinition = getNodeDefinition(renderWorkNodeSnapshot.data.workNode.type)
+  const rehydratedWorkNode = createWorkNode(renderWorkNodeSnapshot.data.workNode.id, nodeDefinition)
+  rehydratedWorkNode.config = deepCloneJsonCompatibleValue(renderWorkNodeSnapshot.data.workNode.config)
+
+  const livePortDefinition = nodeDefinition.portResolver
+    ? nodeDefinition.portResolver(rehydratedWorkNode.config)
+    : deepCloneJsonCompatibleValue(renderWorkNodeSnapshot.data.portDefinition)
+
+  return {
+    id: renderWorkNodeSnapshot.id,
+    type: renderWorkNodeSnapshot.type,
+    position: {
+      x: renderWorkNodeSnapshot.position.x,
+      y: renderWorkNodeSnapshot.position.y,
+    },
+    data: {
+      workNode: rehydratedWorkNode,
+      portDefinition: livePortDefinition,
+    },
+  } as RenderWorkNode
 }
 
 function cloneEdge(edge: Edge): Edge {
@@ -69,13 +136,13 @@ export function createAddNodeCommand(
   dependencies: AddNodeCommandDependencies,
 ): WorkflowCommand {
   const { renderNode, applyAddNodePrimitive, applyRemoveNodePrimitive } = dependencies
-  const renderNodeSnapshot = cloneRenderNode(renderNode)
+  const renderNodeSnapshot = snapshotRenderWorkNode(renderNode)
 
   return {
     type: 'ADD_NODE',
-    execute: () => applyAddNodePrimitive(cloneRenderNode(renderNodeSnapshot)),
+    execute: () => applyAddNodePrimitive(restoreRenderWorkNodeFromSnapshot(renderNodeSnapshot)),
     undo: () => applyRemoveNodePrimitive(renderNodeSnapshot.id),
-    redo: () => applyAddNodePrimitive(cloneRenderNode(renderNodeSnapshot)),
+    redo: () => applyAddNodePrimitive(restoreRenderWorkNodeFromSnapshot(renderNodeSnapshot)),
   }
 }
 
@@ -90,7 +157,7 @@ export function createRemoveNodeCommand(
     applyRemoveNodePrimitive,
     applyAddEdgePrimitive,
   } = dependencies
-  let removedNodeSnapshot: RenderWorkNode | null = null
+  let removedNodeSnapshot: RenderWorkNodeSnapshot | null = null
   let removedIncidentEdgeSnapshots: Edge[] = []
 
   return {
@@ -100,7 +167,7 @@ export function createRemoveNodeCommand(
       if (!existingNode) {
         return false
       }
-      removedNodeSnapshot = cloneRenderNode(existingNode)
+      removedNodeSnapshot = snapshotRenderWorkNode(existingNode)
       removedIncidentEdgeSnapshots = getIncidentEdgesByNodeId(nodeId).map(cloneEdge)
       return applyRemoveNodePrimitive(nodeId)
     },
@@ -109,7 +176,9 @@ export function createRemoveNodeCommand(
         return false
       }
 
-      const hasNodeBeenRestored = applyAddNodePrimitive(cloneRenderNode(removedNodeSnapshot))
+      const hasNodeBeenRestored = applyAddNodePrimitive(
+        restoreRenderWorkNodeFromSnapshot(removedNodeSnapshot),
+      )
       if (!hasNodeBeenRestored) {
         return false
       }

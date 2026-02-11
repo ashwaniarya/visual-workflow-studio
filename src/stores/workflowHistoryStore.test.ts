@@ -7,6 +7,8 @@ import { useWorkflowHistoryStore } from './workflowHistoryStore'
 import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
 import { getNodeDefinition } from '../registry/nodeRegistry'
 import { createWorkNode } from '../factory/workNodeFactory'
+import { executeWorkflow } from '../engine/workflowEngine'
+import { WorkNodeSerialization } from '../serialization/workNodeSerialization'
 
 function createRenderNode(nodeId: string, nodeType: string): RenderWorkNode {
   const nodeDefinition = getNodeDefinition(nodeType)
@@ -97,5 +99,100 @@ describe('workflowHistoryStore command behavior', () => {
     }
 
     expect(undoCount).toBe(WORKFLOW_CONSTANTS.MAX_UNDO_REDO_HISTORY_STEPS)
+  })
+
+  it('executes successfully after adding nodes without requiring reload', () => {
+    const workflowGraphStore = useWorkflowGraphStore()
+    const startNode = createRenderNode('start-node', 'START')
+    const transformNode = createRenderNode('transform-node', 'TRANSFORM')
+    const endNode = createRenderNode('end-node', 'END')
+
+    workflowGraphStore.addNode(startNode, { shouldAutosave: false })
+    workflowGraphStore.addNode(transformNode, { shouldAutosave: false })
+    workflowGraphStore.addNode(endNode, { shouldAutosave: false })
+    workflowGraphStore.addEdge(
+      createRenderEdge('edge-start-transform', 'start-node', 'transform-node'),
+      { shouldAutosave: false },
+    )
+    workflowGraphStore.addEdge(
+      createRenderEdge('edge-transform-end', 'transform-node', 'end-node'),
+      { shouldAutosave: false },
+    )
+
+    const workflowExecutionResult = executeWorkflow(workflowGraphStore.nodes, workflowGraphStore.edges)
+    expect(workflowExecutionResult.nodeExecutionStateMap.get('start-node')?.status).toBe('success')
+    expect(workflowExecutionResult.nodeExecutionStateMap.get('transform-node')?.status).toBe('success')
+    expect(workflowExecutionResult.nodeExecutionStateMap.get('end-node')?.status).toBe('success')
+  })
+
+  it('executes successfully after add-node undo and redo cycle', () => {
+    const workflowGraphStore = useWorkflowGraphStore()
+    const workflowHistoryStore = useWorkflowHistoryStore()
+    const startNode = createRenderNode('start-node', 'START')
+    const transformNode = createRenderNode('transform-node', 'TRANSFORM')
+    const endNode = createRenderNode('end-node', 'END')
+
+    workflowGraphStore.addNode(startNode, { shouldAutosave: false })
+    workflowGraphStore.addNode(endNode, { shouldAutosave: false })
+    workflowGraphStore.addEdge(createRenderEdge('edge-start-end', 'start-node', 'end-node'), {
+      shouldAutosave: false,
+    })
+
+    workflowGraphStore.addNode(transformNode, { shouldAutosave: false })
+    workflowHistoryStore.undoLastUiAction({ shouldAutosave: false })
+    workflowHistoryStore.redoLastUiAction({ shouldAutosave: false })
+
+    workflowGraphStore.removeEdge('edge-start-end', { shouldAutosave: false })
+    workflowGraphStore.addEdge(
+      createRenderEdge('edge-start-transform', 'start-node', 'transform-node'),
+      { shouldAutosave: false },
+    )
+    workflowGraphStore.addEdge(
+      createRenderEdge('edge-transform-end', 'transform-node', 'end-node'),
+      { shouldAutosave: false },
+    )
+
+    const workflowExecutionResult = executeWorkflow(workflowGraphStore.nodes, workflowGraphStore.edges)
+    expect(workflowExecutionResult.nodeExecutionStateMap.get('start-node')?.status).toBe('success')
+    expect(workflowExecutionResult.nodeExecutionStateMap.get('transform-node')?.status).toBe('success')
+    expect(workflowExecutionResult.nodeExecutionStateMap.get('end-node')?.status).toBe('success')
+  })
+
+  it('keeps execution parity after export and import following undo redo', () => {
+    const workflowGraphStore = useWorkflowGraphStore()
+    const workflowHistoryStore = useWorkflowHistoryStore()
+    const workflowSerializer = new WorkNodeSerialization()
+    const startNode = createRenderNode('start-node', 'START')
+    const transformNode = createRenderNode('transform-node', 'TRANSFORM')
+    const endNode = createRenderNode('end-node', 'END')
+
+    workflowGraphStore.addNode(startNode, { shouldAutosave: false })
+    workflowGraphStore.addNode(transformNode, { shouldAutosave: false })
+    workflowGraphStore.addNode(endNode, { shouldAutosave: false })
+    workflowGraphStore.addEdge(
+      createRenderEdge('edge-start-transform', 'start-node', 'transform-node'),
+      { shouldAutosave: false },
+    )
+    workflowGraphStore.addEdge(
+      createRenderEdge('edge-transform-end', 'transform-node', 'end-node'),
+      { shouldAutosave: false },
+    )
+
+    workflowHistoryStore.undoLastUiAction({ shouldAutosave: false })
+    workflowHistoryStore.redoLastUiAction({ shouldAutosave: false })
+
+    const exportedWorkflowJson = workflowSerializer.serialise(
+      [...workflowGraphStore.nodes],
+      [...workflowGraphStore.edges],
+    )
+    const importedWorkflowGraph = workflowSerializer.deserialise(exportedWorkflowJson)
+    const workflowExecutionResult = executeWorkflow(
+      importedWorkflowGraph.nodes,
+      importedWorkflowGraph.edges,
+    )
+
+    expect(workflowExecutionResult.nodeExecutionStateMap.get('start-node')?.status).toBe('success')
+    expect(workflowExecutionResult.nodeExecutionStateMap.get('transform-node')?.status).toBe('success')
+    expect(workflowExecutionResult.nodeExecutionStateMap.get('end-node')?.status).toBe('success')
   })
 })

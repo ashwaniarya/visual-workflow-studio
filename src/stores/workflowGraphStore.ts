@@ -30,6 +30,10 @@ import type { WorkflowCommand } from './helpers/workflowCommandHistory'
 import { useWorkflowPersistenceStore } from './workflowPersistenceStore'
 import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
 
+function isJsonObjectRecord(candidateValue: unknown): candidateValue is Record<string, unknown> {
+  return typeof candidateValue === 'object' && candidateValue !== null
+}
+
 export interface CanvasViewport {
   x: number
   y: number
@@ -182,6 +186,9 @@ export const useWorkflowGraphStore = defineStore('workflowGraph', {
       if (!node?.data?.workNode) {
         return false
       }
+      if (!isJsonObjectRecord(node.data.workNode.config)) {
+        return false
+      }
       node.data.workNode.config[key] = value
 
       const definition = getNodeDefinition(node.data.workNode.type)
@@ -211,7 +218,11 @@ export const useWorkflowGraphStore = defineStore('workflowGraph', {
       if (!node?.data?.workNode) {
         return false
       }
-      node.data.workNode.config = JSON.parse(JSON.stringify(configSnapshot))
+      const clonedConfigSnapshot = JSON.parse(JSON.stringify(configSnapshot))
+      if (!isJsonObjectRecord(clonedConfigSnapshot)) {
+        return false
+      }
+      node.data.workNode.config = clonedConfigSnapshot
       const definition = getNodeDefinition(node.data.workNode.type)
       if (definition.portResolver) {
         const resolvedPortDefinition = definition.portResolver(node.data.workNode.config)
