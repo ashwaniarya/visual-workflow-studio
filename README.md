@@ -35,7 +35,7 @@ npm run test
 
 At a high level, the system works like a closed loop between UI intent, graph state, and runtime execution.  
 When a user drags, connects, edits, or deletes on the canvas, [`WorkFlowCanvas`](src/components/WorkFlowCanvas.vue) emits change events and the graph store applies only the required mutation. That updated graph state then becomes the single source used by two downstream paths: persistence (autosave/import-export) and execution (engine run + node status).  
-Node behavior itself is not hard-coded in the canvas. Instead, the node type is looked up in the registry, the factory creates the work-node instance, and the executor strategy is resolved from node config at runtime. This keeps UI rendering, graph mutation, and execution logic decoupled while still flowing through one consistent state model.
+Node behavior is type-driven through the registry and factory pipeline, so rendering, graph mutation, and runtime execution stay decoupled while sharing one graph state model.
 
 In short, the architecture follows this event flow:
 
@@ -80,28 +80,6 @@ Project structure and key components:
   - creates work nodes from registry definitions.
 - [`src/config/workflowConstants.ts`](src/config/workflowConstants.ts)
   - centralized limits and policy flags.
-
-## How Workflow Engine Works
-
-`workflowEngine` runs as a deterministic traversal loop over the current graph snapshot.
-
-1. Build adjacency from nodes and edges after basic graph validation.
-2. Start from the single `START` node and carry one mutable execution context.
-3. For each node, resolve executor at runtime via registry (`nodeType + config`).
-4. Execute node, capture log entry + per-node status, and pick next edge from selected output port.
-5. Stop when no next node exists or when an execution error is captured.
-
-```mermaid
-flowchart LR
-  graphSnapshot[GraphSnapshot] --> validationStep[BuildAndValidateDAG]
-  validationStep --> startNode[FindStartNode]
-  startNode --> executionLoop[ExecutionLoop]
-  executionLoop --> runtimeResolver[ResolveExecutorFromRegistry]
-  runtimeResolver --> executeNode[ExecuteNode]
-  executeNode --> logState[WriteLogAndNodeState]
-  logState --> nextNode[ResolveNextNodeFromSelectedPort]
-  nextNode --> executionLoop
-```
 
 # UI Component Design and Minimal Design System
 
@@ -154,6 +132,15 @@ In low level design I am covering only key flows.
 
 ### Workflow runtime flow
 
+`workflowEngine` runs as a deterministic traversal loop over the current graph snapshot.
+
+1. Build adjacency and validate DAG invariants.
+2. Locate the single `START` node and initialize execution context.
+3. On each step, resolve an executor from registry using current `workNode` type + config.
+4. Execute the resolved node executor and capture selected output port.
+5. Append execution log and node status updates.
+6. Move to the next node from selected port; stop when no next node exists or an execution error is captured.
+
 ```mermaid
 sequenceDiagram
   participant Palette as NodePalette
@@ -162,15 +149,22 @@ sequenceDiagram
   participant Factory as workNodeFactory
   participant Graph as workflowGraphStore
   participant Engine as workflowEngine
+  participant Resolver as nodeExecutorResolver
+  participant SelectedExecutor as nodeExecutor
 
   Palette->>Canvas: DragNodeType
   Canvas->>Registry: getNodeDefinition(type)
   Canvas->>Factory: createWorkNode(id, definition)
   Canvas->>Graph: addNode(renderWorkNode)
   Graph->>Engine: executeWorkflow(nodes, edges)
-  Engine->>Registry: getNodeDefinition(workNode.type)
-  Engine->>Registry: executorResolver(workNode.config)
-  Engine->>Engine: execute(selectedNodeExecutor)
+  loop executionLoop
+    Engine->>Resolver: resolveNodeExecutor(workNode, nodeId)
+    Resolver->>Registry: getNodeDefinition(workNode.type)
+    Resolver->>Registry: executorResolver(workNode.config)
+    Resolver-->>Engine: selectedNodeExecutor
+    Engine->>SelectedExecutor: execute(context)
+    SelectedExecutor-->>Engine: selectedPortAndContext
+  end
   Engine->>Graph: executionLogAndNodeStateMap
 ```
 
