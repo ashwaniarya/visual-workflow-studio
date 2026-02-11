@@ -18,6 +18,22 @@ Dashboard Demo
 - **PART 2** https://www.loom.com/share/e50192f0a13d4fb5b0aa6ba413dde320
 - **PART 3** https://www.loom.com/share/c8e8a234f05644438610b043a157a918
 
+Architecture and Codebase design
+
+- [High Level Design] https://www.loom.com/share/9791f1479b354f3e92a4abb151eada38
+- [State Management]
+
+https://www.loom.com/share/a50b8a95eb604fd2b77153ee2298fe32
+https://www.loom.com/share/87a7581c30af498cad2ee18498646895
+
+- [Low Level Design]
+  https://www.loom.com/share/16ac53e5b1944bb49c1e7bcefddef49b
+  https://www.loom.com/share/4356708a92fa41fbab4ee09e8361d5de
+  https://www.loom.com/share/7ca6281be1e94073a80fd9470fc084eb
+
+- [How to Create new node and Making Complex Nodes]
+  https://www.loom.com/share/653fc9327b2c4841a8ffedf551424c2d
+
 # Setup
 
 ## Prerequisites
