@@ -6,7 +6,6 @@ Today the built-in node types are `START`, `TRANSFORM`, `DECISION`, `SWITCH`, an
 
 <img width="959" height="473" alt="image" src="https://github.com/user-attachments/assets/b7f6b187-e900-4567-a9c4-f75ea3e00cc8" />
 
-
 # Setup
 
 ## Prerequisites
@@ -126,6 +125,64 @@ Pros and cons of this minimal system:
 - ✅ Pros: faster UI extension, visual consistency, easier theme evolution.
 - ⚠️ Cons: token governance is required to avoid style drift.
 
+# State Management
+
+State is split across Pinia stores by responsibility:
+
+- [`workflowGraphStore`](src/stores/workflowGraphStore.ts): graph nodes/edges, adjacency indexes, selection, and graph mutation primitives.
+- [`workflowHistoryStore`](src/stores/workflowHistoryStore.ts): command history lifecycle ([`run`](src/stores/helpers/workflowCommandHistory.ts), [`undo`](src/stores/helpers/workflowCommandHistory.ts), [`redo`](src/stores/helpers/workflowCommandHistory.ts)) with bounded depth.
+- [`workflowPersistenceStore`](src/stores/workflowPersistenceStore.ts): autosave scheduling, import/export, and restore from local storage.
+- [`workflowExecutionStore`](src/stores/workflowExecutionStore.ts): execution lifecycle, execution logs, and per-node execution status.
+- [`globalUIStore`](src/stores/globalUIStore.ts): Main use case is to keep global ui state like confirmation modal, toast , banner etc. Right now it has confirmation modal with state (`title`, `message`, `actionButtonMap`) and does some action orchestration.
+
+Interaction shape:
+
+`UI event -> graph command -> history update -> autosave (optional) -> execution state update (when run is triggered)`
+
+This separation keeps each store focused while still allowing them to compose cleanly.
+
+## Component-store wiring
+
+The toolbar, canvas, config panel, execution log, and root application shell all rendezvous through the stores whenever a user drags, configures, or runs a workflow.
+
+```mermaid
+flowchart LR
+  WorkFlowToolBar[WorkFlowToolBar] -->|"drags a node type"| WorkFlowCanvas[WorkFlowCanvas]
+  WorkFlowCanvas -->|"mutates nodes and edges"| workflowGraphStore[workflowGraphStore]
+  WorkFlowConfigPanel -->|"edits selected node config"| workflowGraphStore
+  WorkFlowExecutionLog -->|"runs/clears workflows"| workflowExecutionStore[workflowExecutionStore]
+  App -->|"undo/redo shortcuts"| workflowHistoryStore[workflowHistoryStore]
+  App -->|"schedules autosave"| workflowPersistenceStore[workflowPersistenceStore]
+  workflowHistoryStore -->|"requests autosave callback"| workflowPersistenceStore
+  workflowPersistenceStore -->|"restores serialized graph"| workflowGraphStore
+```
+
+- ✅ Pros: keeps each component aligned with the store that owns its domain while the graph, history, persistence, and execution concerns remain isolated.
+- ⚠️ Cons: the coordination surface grows when multiple stores need to react to the same UI event, so the diagram above documents the expectations for bordering flows before they become hard to follow.
+
+## Performance Consideration
+
+For larger workflows, the graph layer is optimized for targeted updates rather than full collection replacement.
+
+The graph store uses:
+
+- `nodeById: Map<string, RenderWorkNode>`
+- `edgeById: Map<string, Edge>`
+- `adjacencyByNodeId: Map<string, Set<string>>`
+
+Why this matters:
+
+- Node/edge lookup and incident-edge operations stay fast (O(1) style lookups).
+- Dynamic port changes can remove only invalid affected edges instead of filtering every edge.
+- `splice` updates preserve top-level array identity, which aligns better with Vue Flow change streams ([`applyNodeChanges`](src/stores/workflowGraphStore.ts), [`applyEdgeChanges`](src/stores/workflowGraphStore.ts)).
+
+Pros and cons of this approach:
+
+- ✅ Pros: better scaling behavior for dense workflows and lower reactive fan-out.
+- ⚠️ Cons: more index consistency rules to maintain (handled by graph consistency assertions in development).
+
+Hard limits and policy flags are centralized in [`src/config/workflowConstants.ts`](src/config/workflowConstants.ts) (for example `MAX_EXECUTION_STEPS`, autosave debounce, undo/redo depth, zoom bounds, and edge validation toggle).
+
 ## Low Level Design
 
 In low level design I am covering only key flows.
@@ -201,64 +258,6 @@ Pros and cons:
 
 - ✅ Pros: strong separation of concerns, better extensibility, node-specific behavior stays local.
 - ⚠️ Cons: a bit more moving pieces, and new contributors need to learn the registry/factory/executor contract.
-
-# State Management
-
-State is split across Pinia stores by responsibility:
-
-- [`workflowGraphStore`](src/stores/workflowGraphStore.ts): graph nodes/edges, adjacency indexes, selection, and graph mutation primitives.
-- [`workflowHistoryStore`](src/stores/workflowHistoryStore.ts): command history lifecycle ([`run`](src/stores/helpers/workflowCommandHistory.ts), [`undo`](src/stores/helpers/workflowCommandHistory.ts), [`redo`](src/stores/helpers/workflowCommandHistory.ts)) with bounded depth.
-- [`workflowPersistenceStore`](src/stores/workflowPersistenceStore.ts): autosave scheduling, import/export, and restore from local storage.
-- [`workflowExecutionStore`](src/stores/workflowExecutionStore.ts): execution lifecycle, execution logs, and per-node execution status.
-- [`globalUIStore`](src/stores/globalUIStore.ts): Main use case is to keep global ui state like confirmation modal, toast , banner etc. Right now it has confirmation modal with state (`title`, `message`, `actionButtonMap`) and does some action orchestration.
-
-Interaction shape:
-
-`UI event -> graph command -> history update -> autosave (optional) -> execution state update (when run is triggered)`
-
-This separation keeps each store focused while still allowing them to compose cleanly.
-
-## Component-store wiring
-
-The toolbar, canvas, config panel, execution log, and root application shell all rendezvous through the stores whenever a user drags, configures, or runs a workflow.
-
-```mermaid
-flowchart LR
-  WorkFlowToolBar[WorkFlowToolBar] -->|"drags a node type"| WorkFlowCanvas[WorkFlowCanvas]
-  WorkFlowCanvas -->|"mutates nodes and edges"| workflowGraphStore[workflowGraphStore]
-  WorkFlowConfigPanel -->|"edits selected node config"| workflowGraphStore
-  WorkFlowExecutionLog -->|"runs/clears workflows"| workflowExecutionStore[workflowExecutionStore]
-  App -->|"undo/redo shortcuts"| workflowHistoryStore[workflowHistoryStore]
-  App -->|"schedules autosave"| workflowPersistenceStore[workflowPersistenceStore]
-  workflowHistoryStore -->|"requests autosave callback"| workflowPersistenceStore
-  workflowPersistenceStore -->|"restores serialized graph"| workflowGraphStore
-```
-
-- ✅ Pros: keeps each component aligned with the store that owns its domain while the graph, history, persistence, and execution concerns remain isolated.
-- ⚠️ Cons: the coordination surface grows when multiple stores need to react to the same UI event, so the diagram above documents the expectations for bordering flows before they become hard to follow.
-
-## Performance Consideration
-
-For larger workflows, the graph layer is optimized for targeted updates rather than full collection replacement.
-
-The graph store uses:
-
-- `nodeById: Map<string, RenderWorkNode>`
-- `edgeById: Map<string, Edge>`
-- `adjacencyByNodeId: Map<string, Set<string>>`
-
-Why this matters:
-
-- Node/edge lookup and incident-edge operations stay fast (O(1) style lookups).
-- Dynamic port changes can remove only invalid affected edges instead of filtering every edge.
-- `splice` updates preserve top-level array identity, which aligns better with Vue Flow change streams ([`applyNodeChanges`](src/stores/workflowGraphStore.ts), [`applyEdgeChanges`](src/stores/workflowGraphStore.ts)).
-
-Pros and cons of this approach:
-
-- ✅ Pros: better scaling behavior for dense workflows and lower reactive fan-out.
-- ⚠️ Cons: more index consistency rules to maintain (handled by graph consistency assertions in development).
-
-Hard limits and policy flags are centralized in [`src/config/workflowConstants.ts`](src/config/workflowConstants.ts) (for example `MAX_EXECUTION_STEPS`, autosave debounce, undo/redo depth, zoom bounds, and edge validation toggle).
 
 ## Code Quality
 
