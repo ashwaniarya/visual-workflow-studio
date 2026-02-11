@@ -101,6 +101,7 @@ export const UI_STRINGS = {
     startNodeHeader: "▶ Start",
     transformNodeHeader: "🔄 Transform",
     ifElseNodeHeader: "🔀 If / Else",
+    decisionNodeHeader: "🔀 Decision",
     switchNodeHeader: "🔀 Switch",
     switchCaseLabel: "cases",
     endNodeHeader: "⏹ End",
