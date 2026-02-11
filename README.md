@@ -224,6 +224,25 @@ Interaction shape:
 
 This separation keeps each store focused while still allowing them to compose cleanly.
 
+## Component-store wiring
+
+The toolbar, canvas, config panel, execution log, and root application shell all rendezvous through the stores whenever a user drags, configures, or runs a workflow.
+
+```mermaid
+flowchart LR
+  WorkFlowToolBar[WorkFlowToolBar] -->|"drags a node type"| WorkFlowCanvas[WorkFlowCanvas]
+  WorkFlowCanvas -->|"mutates nodes and edges"| workflowGraphStore[workflowGraphStore]
+  WorkFlowConfigPanel -->|"edits selected node config"| workflowGraphStore
+  WorkFlowExecutionLog -->|"runs/clears workflows"| workflowExecutionStore[workflowExecutionStore]
+  App -->|"undo/redo shortcuts"| workflowHistoryStore[workflowHistoryStore]
+  App -->|"schedules autosave"| workflowPersistenceStore[workflowPersistenceStore]
+  workflowHistoryStore -->|"requests autosave callback"| workflowPersistenceStore
+  workflowPersistenceStore -->|"restores serialized graph"| workflowGraphStore
+```
+
+- ✅ Pros: keeps each component aligned with the store that owns its domain while the graph, history, persistence, and execution concerns remain isolated.
+- ⚠️ Cons: the coordination surface grows when multiple stores need to react to the same UI event, so the diagram above documents the expectations for bordering flows before they become hard to follow.
+
 ## Performance Consideration
 
 For larger workflows, the graph layer is optimized for targeted updates rather than full collection replacement.
