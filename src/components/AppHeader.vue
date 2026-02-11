@@ -100,6 +100,7 @@ function handleExport() {
   const jsonString = workflowPersistenceStore.exportWorkflow(
     workflowGraphStore.graphNodes,
     workflowGraphStore.graphEdges,
+    workflowGraphStore.canvasViewport ?? undefined,
   );
   const blob = new Blob([jsonString], { type: "application/json" });
   const downloadUrl = URL.createObjectURL(blob);
@@ -133,7 +134,9 @@ function openClearWorkflowConfirmationModal() {
         buttonVariant: "danger",
         callback: async () => {
           await workflowPersistenceStore.waitForAutosaveToSettle();
-          workflowGraphStore.replaceGraphData([], [], { shouldAutosave: false });
+          workflowGraphStore.replaceGraphData([], [], {
+            shouldAutosave: false,
+          });
           workflowGraphStore.setSelectedNode(null);
           workflowHistoryStore.clearUiCommandHistory();
           workflowExecutionStore.clearExecutionLog();

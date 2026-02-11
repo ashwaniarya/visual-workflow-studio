@@ -17,9 +17,16 @@ export interface SerializedEdge {
   targetHandle: string | null
 }
 
+export interface SerializedViewport {
+  x: number
+  y: number
+  zoom: number
+}
+
 export interface SerializedWorkflow {
   version: string
   exportedAt: string
   nodes: SerializedWorkNode[]
   edges: SerializedEdge[]
+  viewport?: SerializedViewport
 }

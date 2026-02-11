@@ -28,6 +28,13 @@ import {
 import { useWorkflowHistoryStore } from './workflowHistoryStore'
 import type { WorkflowCommand } from './helpers/workflowCommandHistory'
 import { useWorkflowPersistenceStore } from './workflowPersistenceStore'
+import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
+
+export interface CanvasViewport {
+  x: number
+  y: number
+  zoom: number
+}
 
 interface WorkflowGraphState {
   graphNodes: RenderWorkNode[]
@@ -36,6 +43,7 @@ interface WorkflowGraphState {
   edgeById: Map<string, Edge>
   adjacencyByNodeId: AdjacencyByNodeId
   selectedNodeId: string | null
+  canvasViewport: CanvasViewport | null
 }
 
 export const useWorkflowGraphStore = defineStore('workflowGraph', {
@@ -46,6 +54,7 @@ export const useWorkflowGraphStore = defineStore('workflowGraph', {
     edgeById: new Map(),
     adjacencyByNodeId: new Map(),
     selectedNodeId: null,
+    canvasViewport: null,
   }),
 
   getters: {
@@ -436,6 +445,18 @@ export const useWorkflowGraphStore = defineStore('workflowGraph', {
 
     setSelectedNode(nodeId: string | null) {
       this.selectedNodeId = nodeId
+    },
+
+    updateCanvasViewport(viewport: CanvasViewport) {
+      this.canvasViewport = { ...viewport }
+      if (WORKFLOW_CONSTANTS.PERSIST_CANVAS_VIEWPORT) {
+        const workflowPersistenceStore = useWorkflowPersistenceStore()
+        workflowPersistenceStore.scheduleWorkflowAutosave()
+      }
+    },
+
+    setCanvasViewport(viewport: CanvasViewport | null) {
+      this.canvasViewport = viewport ? { ...viewport } : null
     },
   },
 })

@@ -95,6 +95,7 @@ export const useWorkflowPersistenceStore = defineStore('workflowPersistence', {
         const workflowJsonString = this.exportWorkflow(
           workflowGraphStore.graphNodes,
           workflowGraphStore.graphEdges,
+          workflowGraphStore.canvasViewport ?? undefined,
         )
         window.localStorage.setItem(WORKFLOW_CONSTANTS.WORKFLOW_STORAGE_KEY, workflowJsonString)
         this.lastWorkflowAutosavedTimestamp = Date.now()
@@ -118,8 +119,9 @@ export const useWorkflowPersistenceStore = defineStore('workflowPersistence', {
       const workflowExecutionStore = useWorkflowExecutionStore()
 
       try {
-        const { nodes, edges } = workNodeSerialization.deserialise(workflowJsonString)
+        const { nodes, edges, viewport } = workNodeSerialization.deserialise(workflowJsonString)
         workflowGraphStore.replaceGraphData(nodes, edges, { shouldAutosave: false })
+        workflowGraphStore.setCanvasViewport(viewport ?? null)
         workflowGraphStore.setSelectedNode(null)
         workflowHistoryStore.clearUiCommandHistory()
         workflowExecutionStore.clearExecutionLog()
@@ -138,8 +140,12 @@ export const useWorkflowPersistenceStore = defineStore('workflowPersistence', {
       window.localStorage.removeItem(WORKFLOW_CONSTANTS.WORKFLOW_STORAGE_KEY)
     },
 
-    exportWorkflow(nodes: RenderWorkNode[], edges: Edge[]): string {
-      return workNodeSerialization.serialise(nodes, edges)
+    exportWorkflow(
+      nodes: RenderWorkNode[],
+      edges: Edge[],
+      viewport?: { x: number; y: number; zoom: number },
+    ): string {
+      return workNodeSerialization.serialise(nodes, edges, viewport)
     },
 
     importWorkflow(jsonString: string): boolean {
@@ -148,8 +154,9 @@ export const useWorkflowPersistenceStore = defineStore('workflowPersistence', {
       const workflowExecutionStore = useWorkflowExecutionStore()
 
       try {
-        const { nodes, edges } = workNodeSerialization.deserialise(jsonString)
+        const { nodes, edges, viewport } = workNodeSerialization.deserialise(jsonString)
         workflowGraphStore.replaceGraphData(nodes, edges, { shouldAutosave: true })
+        workflowGraphStore.setCanvasViewport(viewport ?? null)
         workflowGraphStore.setSelectedNode(null)
         workflowHistoryStore.clearUiCommandHistory()
         workflowExecutionStore.clearExecutionLog()

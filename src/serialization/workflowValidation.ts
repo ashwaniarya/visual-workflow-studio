@@ -4,6 +4,7 @@ import type {
   SerializedWorkflow,
   SerializedWorkNode,
   SerializedEdge,
+  SerializedViewport,
 } from '../models/serialization'
 
 // ─── Envelope Validation ─────────────────────────────────────────────
@@ -209,4 +210,18 @@ export function validateEdgeShapeList(edges: unknown[]): asserts edges is Serial
       throw new Error(`Edge "${edgeLabel}" at index ${index}: "targetHandle" must be a string or null`)
     }
   })
+}
+
+// ─── Viewport Validation (optional) ────────────────────────────────────
+
+export function validateViewport(viewport: unknown): asserts viewport is SerializedViewport {
+  if (typeof viewport !== 'object' || viewport === null || Array.isArray(viewport)) {
+    throw new Error('Invalid workflow JSON: "viewport" must be a plain object when present')
+  }
+
+  const record = viewport as Record<string, unknown>
+
+  if (typeof record.x !== 'number' || typeof record.y !== 'number' || typeof record.zoom !== 'number') {
+    throw new Error('Invalid workflow JSON: "viewport" must have numeric "x", "y", and "zoom" fields')
+  }
 }

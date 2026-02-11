@@ -7,7 +7,13 @@ import { useWorkflowGraphStore } from "../stores/workflowGraphStore";
 import { getNodeDefinition } from "../registry/nodeRegistry";
 import { createWorkNode } from "../factory/workNodeFactory";
 import type { RenderWorkNode } from "../models/renderWorkNode";
-import type { Connection, Edge, EdgeChange, Node as VueFlowNode, NodeChange } from "@vue-flow/core";
+import type {
+  Connection,
+  Edge,
+  EdgeChange,
+  Node as VueFlowNode,
+  NodeChange,
+} from "@vue-flow/core";
 import { canConnect } from "../engine/workflowEngine";
 import { WORKFLOW_CONSTANTS } from "../config/workflowConstants";
 
@@ -20,7 +26,9 @@ import DeletableEdgeRenderer from "./edgeRenderers/DeletableEdgeRenderer.vue";
 import WorkflowMiniMapPanel from "./WorkflowMiniMapPanel.vue";
 
 const workflowGraphStore = useWorkflowGraphStore();
-const canvasNodes = computed<VueFlowNode[]>(() => [...workflowGraphStore.nodes]);
+const canvasNodes = computed<VueFlowNode[]>(() => [
+  ...workflowGraphStore.nodes,
+]);
 const canvasEdges = computed<Edge[]>(() => [...workflowGraphStore.edges]);
 const { onConnect, onNodeClick, onNodesChange, onEdgesChange, project } =
   useVueFlow();
@@ -108,6 +116,22 @@ onNodeClick(({ node }) => {
 function onPaneClick() {
   workflowGraphStore.setSelectedNode(null);
 }
+
+function onMoveEnd(event: {
+  flowTransform: { x: number; y: number; zoom: number };
+}) {
+  if (!WORKFLOW_CONSTANTS.PERSIST_CANVAS_VIEWPORT) return;
+  workflowGraphStore.updateCanvasViewport(event.flowTransform);
+}
+
+function onVueFlowInit(flowInstance: {
+  setViewport: (v: { x: number; y: number; zoom: number }) => void;
+}) {
+  const viewport = workflowGraphStore.canvasViewport;
+  if (viewport) {
+    flowInstance.setViewport(viewport);
+  }
+}
 </script>
 
 <template>
@@ -119,6 +143,8 @@ function onPaneClick() {
       :max-zoom="WORKFLOW_CONSTANTS.MAX_ZOOM"
       :default-zoom="WORKFLOW_CONSTANTS.DEFAULT_CANVAS_ZOOM"
       @pane-click="onPaneClick"
+      @move-end="onMoveEnd"
+      @init="onVueFlowInit"
     >
       <template #node-START="nodeProps">
         <StartNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />

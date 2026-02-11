@@ -4,6 +4,7 @@ import type {
   SerializedWorkflow,
   SerializedWorkNode,
   SerializedEdge,
+  SerializedViewport,
 } from '../models/serialization'
 import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
 import { getNodeDefinition } from '../registry/nodeRegistry'
@@ -13,6 +14,7 @@ import {
   validateNodeShapeList,
   validateNodeConfig,
   validateEdgeShapeList,
+  validateViewport,
 } from './workflowValidation'
 
 // ─── WorkNodeSerialization ───────────────────────────────────────────
@@ -23,7 +25,11 @@ import {
 export class WorkNodeSerialization {
   // ── Serialise ────────────────────────────────────────────────────
 
-  serialise(nodes: RenderWorkNode[], edges: Edge[]): string {
+  serialise(
+    nodes: RenderWorkNode[],
+    edges: Edge[],
+    viewport?: SerializedViewport,
+  ): string {
     const serializedNodes: SerializedWorkNode[] = nodes.map((renderNode) => {
       const workNode = renderNode.data?.workNode
       if (!workNode) {
@@ -50,6 +56,7 @@ export class WorkNodeSerialization {
       exportedAt: new Date().toISOString(),
       nodes: serializedNodes,
       edges: serializedEdges,
+      ...(viewport && { viewport }),
     }
 
     return JSON.stringify(serializedWorkflow, null, 2)
@@ -57,7 +64,11 @@ export class WorkNodeSerialization {
 
   // ── Deserialise ──────────────────────────────────────────────────
 
-  deserialise(jsonString: string): { nodes: RenderWorkNode[]; edges: Edge[] } {
+  deserialise(jsonString: string): {
+    nodes: RenderWorkNode[]
+    edges: Edge[]
+    viewport?: SerializedViewport
+  } {
     // 1. Parse
     let parsed: unknown
     try {
@@ -80,7 +91,12 @@ export class WorkNodeSerialization {
     // 5. Validate edge shapes
     validateEdgeShapeList(parsed.edges)
 
-    // 6. Reconstruct live objects
+    // 6. Validate viewport when present
+    if (parsed.viewport !== undefined) {
+      validateViewport(parsed.viewport)
+    }
+
+    // 7. Reconstruct live objects
     const reconstructedNodes: RenderWorkNode[] = parsed.nodes.map(
       (serializedNode: SerializedWorkNode) => {
         const definition = getNodeDefinition(serializedNode.type)
@@ -114,6 +130,7 @@ export class WorkNodeSerialization {
       }),
     )
 
-    return { nodes: reconstructedNodes, edges: reconstructedEdges }
+    const viewport = parsed.viewport as SerializedViewport | undefined
+    return { nodes: reconstructedNodes, edges: reconstructedEdges, viewport }
   }
 }
