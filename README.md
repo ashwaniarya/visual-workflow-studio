@@ -114,16 +114,19 @@ Minimal design system principles:
 - Reuse semantic tokens first, then add new values only when a clear new role appears.
 - Keep visual rules consistent across node and edge surfaces.
 
-Accessibility baseline:
+Accessibility baseline and implemented coverage:
 
-- Visible keyboard focus for interactive controls.
-- High contrast for selected/error/success states.
-- Comfortable interaction targets for delete and edge actions.
+- Form controls now support programmatic label wiring (`label for` -> `input/select/textarea id`) through shared primitives.
+- Validation states expose screen-reader context with `aria-invalid` and `aria-describedby` (including JSON field error messaging).
+- Icon and emoji action controls now expose explicit accessible names (`aria-label`) for header, node actions, and log controls.
+- Modal behavior supports keyboard lifecycle: initial focus on open, `Escape` to close (when allowed), focus trap with `Tab`/`Shift+Tab`, and focus restore on close.
+- Interactive controls use visible `:focus-visible` styling to keep keyboard focus discoverable across themes.
+- Execution log container uses log semantics (`role="log"`, `aria-live="polite"`) for incremental runtime updates.
 
 Pros and cons of this minimal system:
 
-- ✅ Pros: faster UI extension, visual consistency, easier theme evolution.
-- ⚠️ Cons: token governance is required to avoid style drift.
+- ✅ Pros: faster UI extension, visual consistency, easier theme evolution, and better built-in keyboard/screen-reader support.
+- ⚠️ Cons: token governance is required to avoid style drift; accessibility validation is currently manual (no automated a11y tooling yet).
 
 # State Management
 
@@ -153,8 +156,8 @@ flowchart LR
   WorkFlowExecutionLog -->|"runs/clears workflows"| workflowExecutionStore[workflowExecutionStore]
   App -->|"undo/redo shortcuts"| workflowHistoryStore[workflowHistoryStore]
   App -->|"schedules autosave"| workflowPersistenceStore[workflowPersistenceStore]
-  workflowHistoryStore -->|"requests autosave callback"| workflowPersistenceStore
-  workflowPersistenceStore -->|"restores serialized graph"| workflowGraphStore
+  workflowHistoryStore -.->|"requests autosave callback"| workflowPersistenceStore
+  workflowPersistenceStore -.->|"restores serialized graph"| workflowGraphStore
 ```
 
 - ✅ Pros: keeps each component aligned with the store that owns its domain while the graph, history, persistence, and execution concerns remain isolated.
