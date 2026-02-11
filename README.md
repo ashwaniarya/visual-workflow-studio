@@ -12,9 +12,9 @@ Setup Video
 
 
 Dashboard Demo
-- https://www.loom.com/share/2cf98d59da244de5b78aed8bfb6f20df
-- https://www.loom.com/share/e50192f0a13d4fb5b0aa6ba413dde320
-- https://www.loom.com/share/c8e8a234f05644438610b043a157a918
+- **PART 1** https://www.loom.com/share/2cf98d59da244de5b78aed8bfb6f20df
+- **PART 2** https://www.loom.com/share/e50192f0a13d4fb5b0aa6ba413dde320
+- **PART 3** https://www.loom.com/share/c8e8a234f05644438610b043a157a918
 
 
 
