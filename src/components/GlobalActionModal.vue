@@ -75,6 +75,9 @@ function onDocumentKeyDown(event: KeyboardEvent) {
 
   const firstFocusableElement = focusableElements[0];
   const lastFocusableElement = focusableElements[focusableElements.length - 1];
+  if (!firstFocusableElement || !lastFocusableElement) {
+    return;
+  }
   const activeElement = document.activeElement as HTMLElement | null;
 
   if (event.shiftKey && activeElement === firstFocusableElement) {
