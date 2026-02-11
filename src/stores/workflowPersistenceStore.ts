@@ -68,6 +68,22 @@ export const useWorkflowPersistenceStore = defineStore('workflowPersistence', {
       }, WORKFLOW_CONSTANTS.WORKFLOW_AUTOSAVE_DEBOUNCE_MS)
     },
 
+    async waitForAutosaveToSettle() {
+      if (typeof window === 'undefined' || !this.isWorkflowAutosaveInProgress) {
+        return
+      }
+
+      await new Promise<void>((resolve) => {
+        const autosaveStatusPollIntervalMilliseconds = 40
+        const autosaveStatusPollTimerId = window.setInterval(() => {
+          if (!this.isWorkflowAutosaveInProgress) {
+            window.clearInterval(autosaveStatusPollTimerId)
+            resolve()
+          }
+        }, autosaveStatusPollIntervalMilliseconds)
+      })
+    },
+
     persistWorkflowSnapshotToStorage() {
       if (typeof window === 'undefined') {
         return
@@ -112,6 +128,14 @@ export const useWorkflowPersistenceStore = defineStore('workflowPersistence', {
         window.localStorage.removeItem(WORKFLOW_CONSTANTS.WORKFLOW_STORAGE_KEY)
         return false
       }
+    },
+
+    clearPersistedWorkflowSnapshot() {
+      if (typeof window === 'undefined') {
+        return
+      }
+
+      window.localStorage.removeItem(WORKFLOW_CONSTANTS.WORKFLOW_STORAGE_KEY)
     },
 
     exportWorkflow(nodes: RenderWorkNode[], edges: Edge[]): string {

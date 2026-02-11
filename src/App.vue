@@ -11,6 +11,7 @@ import WorkFlowToolBar from "./components/WorkFlowToolBar.vue";
 import WorkFlowCanvas from "./components/WorkFlowCanvas.vue";
 import WorkFlowConfigPanel from "./components/WorkFlowConfigPanel.vue";
 import WorkFlowExecutionLog from "./components/WorkFlowExecutionLog.vue";
+import GlobalActionModal from "./components/GlobalActionModal.vue";
 
 const workflowHistoryStore = useWorkflowHistoryStore();
 const workflowPersistenceStore = useWorkflowPersistenceStore();
@@ -68,6 +69,7 @@ onUnmounted(() => {
       </div>
       <WorkFlowConfigPanel />
     </div>
+    <GlobalActionModal />
   </div>
 </template>
 

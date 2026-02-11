@@ -67,6 +67,7 @@ Project structure and key components:
   - [`workflowHistoryStore.ts`](src/stores/workflowHistoryStore.ts): command history, undo/redo lifecycle.
   - [`workflowPersistenceStore.ts`](src/stores/workflowPersistenceStore.ts): autosave, import/export, restore.
   - [`workflowExecutionStore.ts`](src/stores/workflowExecutionStore.ts): runtime execution log + node execution states.
+  - [`globalUIStore.ts`](src/stores/globalUIStore.ts): global modal/dialog state with consumer-defined action callbacks.
 - [`src/engine/`](src/engine/)
   - [`workflowEngine.ts`](src/engine/workflowEngine.ts): validation rules, DAG build, execution loop.
   - [`executors/*`](src/engine/executors/): specialized execution strategies.
@@ -187,6 +188,7 @@ State is split across Pinia stores by responsibility:
 - [`workflowHistoryStore`](src/stores/workflowHistoryStore.ts): command history lifecycle ([`run`](src/stores/helpers/workflowCommandHistory.ts), [`undo`](src/stores/helpers/workflowCommandHistory.ts), [`redo`](src/stores/helpers/workflowCommandHistory.ts)) with bounded depth.
 - [`workflowPersistenceStore`](src/stores/workflowPersistenceStore.ts): autosave scheduling, import/export, and restore from local storage.
 - [`workflowExecutionStore`](src/stores/workflowExecutionStore.ts): execution lifecycle, execution logs, and per-node execution status.
+- [`globalUIStore`](src/stores/globalUIStore.ts): Main use case is to keep global ui state like confirmation modal, toast , banner etc. Right now it has confirmation modal with state (`title`, `message`, `actionButtonMap`) and does some action orchestration.
 
 Interaction shape:
 

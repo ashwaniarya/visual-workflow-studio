@@ -34,6 +34,13 @@
       <BaseButton
         variant="ghost"
         size="small"
+        @click="openClearWorkflowConfirmationModal"
+      >
+        🧹 Clear Workflow
+      </BaseButton>
+      <BaseButton
+        variant="ghost"
+        size="small"
         :is-disabled="!canUndoUiAction"
         @click="handleUndoAction"
       >
@@ -63,6 +70,8 @@ import { computed, ref } from "vue";
 import { useWorkflowGraphStore } from "../stores/workflowGraphStore";
 import { useWorkflowHistoryStore } from "../stores/workflowHistoryStore";
 import { useWorkflowPersistenceStore } from "../stores/workflowPersistenceStore";
+import { useWorkflowExecutionStore } from "../stores/workflowExecutionStore";
+import { useGlobalUIStore } from "../stores/globalUIStore";
 import {
   useThemePreferenceStore,
   type ThemeMode,
@@ -74,6 +83,8 @@ import BaseTypography from "./primitives/BaseTypography.vue";
 const workflowGraphStore = useWorkflowGraphStore();
 const workflowHistoryStore = useWorkflowHistoryStore();
 const workflowPersistenceStore = useWorkflowPersistenceStore();
+const workflowExecutionStore = useWorkflowExecutionStore();
+const globalUIStore = useGlobalUIStore();
 const themePreferenceStore = useThemePreferenceStore();
 const fileInputReference = ref<HTMLInputElement | null>(null);
 const selectedThemeMode = computed(
@@ -105,6 +116,33 @@ function handleExport() {
 
 function handleImport() {
   fileInputReference.value?.click();
+}
+
+function openClearWorkflowConfirmationModal() {
+  globalUIStore.openModal({
+    title: "Clear workflow?",
+    message: "Are you sure you want to clear?",
+    actionButtonMap: {
+      dismissClearWorkflowModal: {
+        buttonLabel: "No",
+        buttonVariant: "secondary",
+        callback: () => "dismiss" as const,
+      },
+      confirmClearWorkflowData: {
+        buttonLabel: "Yes",
+        buttonVariant: "danger",
+        callback: async () => {
+          await workflowPersistenceStore.waitForAutosaveToSettle();
+          workflowGraphStore.replaceGraphData([], [], { shouldAutosave: false });
+          workflowGraphStore.setSelectedNode(null);
+          workflowHistoryStore.clearUiCommandHistory();
+          workflowExecutionStore.clearExecutionLog();
+          workflowPersistenceStore.clearPersistedWorkflowSnapshot();
+          return "dismiss" as const;
+        },
+      },
+    },
+  });
 }
 
 function handleUndoAction() {
