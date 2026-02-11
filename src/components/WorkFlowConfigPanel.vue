@@ -7,6 +7,7 @@ import BaseSurface from "./primitives/BaseSurface.vue";
 import BaseTypography from "./primitives/BaseTypography.vue";
 import WorkflowArrayConfigField from "./workflowConfig/WorkflowArrayConfigField.vue";
 import WorkflowJsonConfigField from "./workflowConfig/WorkflowJsonConfigField.vue";
+import { UI_STRINGS } from "../localization/uiStrings";
 
 const workflowGraphStore = useWorkflowGraphStore();
 
@@ -18,6 +19,7 @@ const workNode = computed(() => selectedNode.value?.data?.workNode);
 const configSchema = computed(
   () => selectedNodeDefinition.value?.configSchema ?? [],
 );
+const configPanelStrings = UI_STRINGS.workflowConfigPanel;
 
 function isFieldVisible(field: {
   visibleWhen?: { field: string; in: unknown[] };
@@ -58,12 +60,13 @@ function buildConfigFieldControlId(fieldKey: string): string {
       <div class="panel-header">
         <span class="panel-icon">{{ selectedNodeDefinition.icon }}</span>
         <BaseTypography as="h3" variant="headingSmall" class="panel-title">
-          {{ selectedNodeDefinition.label }} Config
+          {{ selectedNodeDefinition.label }}
+          {{ configPanelStrings.configSuffix }}
         </BaseTypography>
         <BaseButton
           variant="ghost"
           size="small"
-          accessible-label="Close node configuration panel"
+          :accessible-label="configPanelStrings.closePanelAccessibleLabel"
           @click="workflowGraphStore.setSelectedNode(null)"
         >
           ✕
@@ -79,7 +82,7 @@ function buildConfigFieldControlId(fieldKey: string): string {
             class="field-label"
             :for="buildConfigFieldControlId('node-id')"
           >
-            Node ID
+            {{ configPanelStrings.nodeIdLabel }}
           </BaseTypography>
           <BaseInput
             :model-value="workNode.id"
@@ -179,7 +182,7 @@ function buildConfigFieldControlId(fieldKey: string): string {
     <template v-else>
       <div class="panel-empty">
         <BaseTypography as="p" variant="body" tone="muted">
-          👈 Select a node to configure
+          {{ configPanelStrings.emptyStateMessage }}
         </BaseTypography>
       </div>
     </template>

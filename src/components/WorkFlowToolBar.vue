@@ -2,9 +2,11 @@
 import { useWorkflowGraphStore } from "../stores/workflowGraphStore";
 import BaseTypography from "./primitives/BaseTypography.vue";
 import BaseSurface from "./primitives/BaseSurface.vue";
+import { UI_STRINGS } from "../localization/uiStrings";
 
 const workflowGraphStore = useWorkflowGraphStore();
 const nodeDefinitions = workflowGraphStore.availableNodeDefinitions;
+const toolbarStrings = UI_STRINGS.workflowToolBar;
 
 function onDragStart(event: DragEvent, nodeType: string) {
   if (event.dataTransfer) {
@@ -21,12 +23,16 @@ function onDragStart(event: DragEvent, nodeType: string) {
     padding="large"
     class="workflow-toolbar"
     role="complementary"
-    aria-label="Workflow node library"
+    :aria-label="toolbarStrings.toolbarContainerAriaLabel"
   >
     <BaseTypography as="h3" variant="headingSmall" class="toolbar-title">
-      📦 Nodes
+      {{ toolbarStrings.toolbarTitle }}
     </BaseTypography>
-    <div class="toolbar-node-list" role="list" aria-label="Draggable workflow nodes">
+    <div
+      class="toolbar-node-list"
+      role="list"
+      :aria-label="toolbarStrings.draggableNodesAriaLabel"
+    >
       <BaseSurface
         v-for="definition in nodeDefinitions"
         :key="definition.type"

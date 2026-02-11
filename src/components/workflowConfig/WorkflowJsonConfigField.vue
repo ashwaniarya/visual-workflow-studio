@@ -1,52 +1,55 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import BaseInput from '../primitives/BaseInput.vue'
-import BaseTypography from '../primitives/BaseTypography.vue'
+import { ref, watch } from "vue";
+import BaseInput from "../primitives/BaseInput.vue";
+import BaseTypography from "../primitives/BaseTypography.vue";
+import { UI_STRINGS } from "../../localization/uiStrings";
 
 interface WorkflowJsonConfigFieldProps {
-  nodeId: string
-  fieldKey: string
-  modelValue: unknown
-  placeholder?: string
-  inputControlId?: string
+  nodeId: string;
+  fieldKey: string;
+  modelValue: unknown;
+  placeholder?: string;
+  inputControlId?: string;
 }
 
-const properties = defineProps<WorkflowJsonConfigFieldProps>()
+const properties = defineProps<WorkflowJsonConfigFieldProps>();
 
 const emit = defineEmits<{
-  (eventName: 'update:modelValue', value: unknown): void
-}>()
+  (eventName: "update:modelValue", value: unknown): void;
+}>();
 
-const LOCAL_VALIDATION_MESSAGES = {
-  invalidJson: 'Invalid JSON. Check syntax and try again.',
-} as const
+const workflowJsonStrings = UI_STRINGS.workflowJsonConfigField;
 
-const jsonTextDraftValue = ref(formatJsonValue(properties.modelValue))
-const jsonValidationErrorMessage = ref('')
-const jsonValidationErrorMessageId = `${properties.inputControlId ?? `${properties.nodeId}-${properties.fieldKey}`}-json-error`
+const jsonTextDraftValue = ref(formatJsonValue(properties.modelValue));
+const jsonValidationErrorMessage = ref("");
+const jsonValidationErrorMessageId = `${properties.inputControlId ?? `${properties.nodeId}-${properties.fieldKey}`}-json-error`;
 
-watch(() => [properties.nodeId, properties.fieldKey, properties.modelValue], () => {
-  if (jsonValidationErrorMessage.value) {
-    return
-  }
+watch(
+  () => [properties.nodeId, properties.fieldKey, properties.modelValue],
+  () => {
+    if (jsonValidationErrorMessage.value) {
+      return;
+    }
 
-  jsonTextDraftValue.value = formatJsonValue(properties.modelValue)
-}, { deep: true })
+    jsonTextDraftValue.value = formatJsonValue(properties.modelValue);
+  },
+  { deep: true },
+);
 
 function onJsonInputValueChange(rawValue: string): void {
-  jsonTextDraftValue.value = rawValue
+  jsonTextDraftValue.value = rawValue;
 
   try {
-    const parsedValue = JSON.parse(rawValue)
-    jsonValidationErrorMessage.value = ''
-    emit('update:modelValue', parsedValue)
+    const parsedValue = JSON.parse(rawValue);
+    jsonValidationErrorMessage.value = "";
+    emit("update:modelValue", parsedValue);
   } catch {
-    jsonValidationErrorMessage.value = LOCAL_VALIDATION_MESSAGES.invalidJson
+    jsonValidationErrorMessage.value = workflowJsonStrings.invalidJsonMessage;
   }
 }
 
 function formatJsonValue(value: unknown): string {
-  return JSON.stringify(value, null, 2)
+  return JSON.stringify(value, null, 2);
 }
 </script>
 
@@ -57,7 +60,9 @@ function formatJsonValue(value: unknown): string {
     :model-value="jsonTextDraftValue"
     :placeholder="properties.placeholder"
     :control-id="properties.inputControlId"
-    :described-by-id="jsonValidationErrorMessage ? jsonValidationErrorMessageId : undefined"
+    :described-by-id="
+      jsonValidationErrorMessage ? jsonValidationErrorMessageId : undefined
+    "
     :has-validation-error="Boolean(jsonValidationErrorMessage)"
     :state="jsonValidationErrorMessage ? 'error' : 'default'"
     @update:model-value="onJsonInputValueChange"

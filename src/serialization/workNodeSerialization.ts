@@ -10,6 +10,7 @@ import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
 import { getNodeDefinition } from '../registry/nodeRegistry'
 import { createWorkNode } from '../factory/workNodeFactory'
 import {
+  resolveCanonicalNodeType,
   validateWorkflowEnvelope,
   validateNodeShapeList,
   validateNodeConfig,
@@ -99,7 +100,8 @@ export class WorkNodeSerialization {
     // 7. Reconstruct live objects
     const reconstructedNodes: RenderWorkNode[] = parsed.nodes.map(
       (serializedNode: SerializedWorkNode) => {
-        const definition = getNodeDefinition(serializedNode.type)
+        const canonicalType = resolveCanonicalNodeType(serializedNode.type)
+        const definition = getNodeDefinition(canonicalType)
         const workNode = createWorkNode(serializedNode.id, definition)
 
         // Overlay validated config onto the freshly created node
@@ -113,7 +115,7 @@ export class WorkNodeSerialization {
 
         return {
           id: serializedNode.id,
-          type: serializedNode.type,
+          type: canonicalType,
           position: { ...serializedNode.position },
           data: { workNode, portDefinition },
         } as RenderWorkNode

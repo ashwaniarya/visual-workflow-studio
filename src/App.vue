@@ -5,6 +5,7 @@ import { defineAsyncComponent, onMounted, onUnmounted } from "vue";
 import { useWorkflowHistoryStore } from "./stores/workflowHistoryStore";
 import { useWorkflowPersistenceStore } from "./stores/workflowPersistenceStore";
 import { WORKFLOW_CONSTANTS } from "./config/workflowConstants";
+import { UI_STRINGS } from "./localization/uiStrings";
 
 import AppHeader from "./components/AppHeader.vue";
 import WorkFlowToolBar from "./components/WorkFlowToolBar.vue";
@@ -15,8 +16,8 @@ import { HEAVY_COMPONENT_SPLIT_POLICY } from "./config/componentPerformanceConfi
 
 const workflowHistoryStore = useWorkflowHistoryStore();
 const workflowPersistenceStore = useWorkflowPersistenceStore();
-const workFlowCanvasSplitPolicy =
-  HEAVY_COMPONENT_SPLIT_POLICY.workflowCanvas;
+const appStrings = UI_STRINGS.app;
+const workFlowCanvasSplitPolicy = HEAVY_COMPONENT_SPLIT_POLICY.workflowCanvas;
 
 const AsyncWorkFlowCanvasRenderer = defineAsyncComponent({
   loader: () =>
@@ -82,27 +83,27 @@ onUnmounted(() => {
 <template>
   <div class="app-layout">
     <AppHeader />
-  <div class="app-body">
-    <WorkFlowToolBar />
-    <div class="app-center">
-      <Suspense>
-        <template #default>
-          <AsyncWorkFlowCanvasRenderer />
-        </template>
-        <template #fallback>
-          <div
-            class="workflow-canvas-loading"
-            role="status"
-            aria-live="polite"
-          >
-            Loading workflow canvas…
-          </div>
-        </template>
-      </Suspense>
-      <WorkFlowExecutionLog />
+    <div class="app-body">
+      <WorkFlowToolBar />
+      <div class="app-center">
+        <Suspense>
+          <template #default>
+            <AsyncWorkFlowCanvasRenderer />
+          </template>
+          <template #fallback>
+            <div
+              class="workflow-canvas-loading"
+              role="status"
+              aria-live="polite"
+            >
+              {{ appStrings.canvasLoadingMessage }}
+            </div>
+          </template>
+        </Suspense>
+        <WorkFlowExecutionLog />
+      </div>
+      <WorkFlowConfigPanel />
     </div>
-    <WorkFlowConfigPanel />
-  </div>
     <GlobalActionModal />
   </div>
 </template>

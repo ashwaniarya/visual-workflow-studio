@@ -107,8 +107,8 @@ registerNode({
 })
 
 registerNode({
-  type: 'DECISION',
-  label: 'Decision',
+  type: 'IFELSE',
+  label: 'If / Else',
   category: 'control',
   icon: '🔀',
   portDefinition: {

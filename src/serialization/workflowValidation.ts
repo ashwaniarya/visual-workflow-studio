@@ -9,6 +9,11 @@ import type {
 
 // ─── Envelope Validation ─────────────────────────────────────────────
 
+export function resolveCanonicalNodeType(candidateType: string): string {
+  const aliasTable = WORKFLOW_CONSTANTS.NODE_TYPE_ALIASES
+  return aliasTable[candidateType as keyof typeof aliasTable] ?? candidateType
+}
+
 export function validateWorkflowEnvelope(data: unknown): asserts data is SerializedWorkflow {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     throw new Error('Invalid workflow JSON: root must be a plain object')
@@ -55,9 +60,16 @@ export function validateNodeShapeList(nodes: unknown[]): asserts nodes is Serial
     const nodeLabel = record.id
 
     // type
-    if (typeof record.type !== 'string' || !validTypes.includes(record.type)) {
+    if (typeof record.type !== 'string') {
+      throw new Error(`Node "${nodeLabel}" at index ${index}: "type" must be a string`)
+    }
+
+    const rawTypeValue = record.type
+    const canonicalType = resolveCanonicalNodeType(rawTypeValue)
+    record.type = canonicalType
+    if (!validTypes.includes(canonicalType)) {
       throw new Error(
-        `Node "${nodeLabel}" at index ${index}: "type" must be one of [${validTypes.join(', ')}], got "${record.type}"`,
+        `Node "${nodeLabel}" at index ${index}: "type" must be one of [${validTypes.join(', ')}], got "${rawTypeValue}"`,
       )
     }
 
@@ -98,7 +110,9 @@ const FIELD_TYPE_TO_EXPECTED_TYPEOF: Record<string, string> = {
 }
 
 export function validateNodeConfig(node: SerializedWorkNode): void {
-  const definition = getNodeDefinition(node.type)
+  const canonicalType = resolveCanonicalNodeType(node.type)
+  node.type = canonicalType
+  const definition = getNodeDefinition(canonicalType)
   const schema = definition.configSchema
   const schemaKeys = new Set(schema.map((field) => field.key))
 

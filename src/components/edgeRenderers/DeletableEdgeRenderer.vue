@@ -7,6 +7,7 @@ import {
 } from "@vue-flow/core";
 import { useWorkflowGraphStore } from "../../stores/workflowGraphStore";
 import { useWorkflowExecutionStore } from "../../stores/workflowExecutionStore";
+import { UI_STRINGS } from "../../localization/uiStrings";
 
 type DeletableEdgeRendererProps = Pick<
   EdgeProps,
@@ -29,6 +30,7 @@ const isEdgeHovered = ref(false);
 const isWorkflowExecutionInProgress = computed(
   () => workflowExecutionStore.isExecuting,
 );
+const edgeRendererStrings = UI_STRINGS.edgeRenderers;
 
 const edgePath = computed(() => {
   return getBezierPath({
@@ -91,7 +93,8 @@ function handleDeleteEdge() {
       <button
         class="edge-delete-button"
         @click.stop="handleDeleteEdge"
-        title="Delete edge"
+        :title="edgeRendererStrings.deleteEdgeButtonTitle"
+        :aria-label="edgeRendererStrings.deleteEdgeButtonAriaLabel"
       >
         ✕
       </button>

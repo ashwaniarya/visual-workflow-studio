@@ -2,7 +2,7 @@
 
 Visual Workflow Studio is a visual DAG editor built with Vue 3 and TypeScript. You drag nodes onto a canvas, connect them into a workflow, configure behavior per node, and run the flow to inspect execution logs step by step.
 
-Today the built-in node types are `START`, `TRANSFORM`, `DECISION`, `SWITCH`, and `END`. The execution engine moves through the graph by following the output port selected by each node executor. Workflows can be exported/imported as JSON, and canvas state is autosaved locally.
+Today the built-in node types are `START`, `TRANSFORM`, `IFELSE`, `SWITCH`, and `END`. The execution engine moves through the graph by following the output port selected by each node executor. Workflows can be exported/imported as JSON, and canvas state is autosaved locally.
 
 <img width="959" height="473" alt="image" src="https://github.com/user-attachments/assets/b7f6b187-e900-4567-a9c4-f75ea3e00cc8" />
 
@@ -136,7 +136,7 @@ flowchart TB
   WorkFlowCanvas --> NodeRendererWrapper[NodeRendererWrapper]
   NodeRendererWrapper --> StartNodeRenderer[StartNodeRenderer]
   NodeRendererWrapper --> TransformNodeRenderer[TransformNodeRenderer]
-  NodeRendererWrapper --> DecisionNodeRenderer[DecisionNodeRenderer]
+  NodeRendererWrapper --> IfElseNodeRenderer[IfElseNodeRenderer]
   NodeRendererWrapper --> SwitchNodeRenderer[SwitchNodeRenderer]
   NodeRendererWrapper --> EndNodeRenderer[EndNodeRenderer]
   WorkFlowCanvas --> DeletableEdgeRenderer[DeletableEdgeRenderer]

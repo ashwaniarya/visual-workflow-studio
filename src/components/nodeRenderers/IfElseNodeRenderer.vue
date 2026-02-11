@@ -21,8 +21,15 @@ const nodeRendererStrings = UI_STRINGS.nodeRenderers;
 
 <template>
   <NodeRendererWrapper :nodeId="id">
-    <div class="node-renderer node-end" :class="executionCssClass">
-      <div class="node-header">{{ nodeRendererStrings.endNodeHeader }}</div>
+    <div class="node-renderer node-if-else" :class="executionCssClass">
+      <div class="node-header">{{ nodeRendererStrings.ifElseNodeHeader }}</div>
+      <div class="node-body">
+        <span class="node-preview"
+          >{{ data.workNode.config.targetField }}
+          {{ data.workNode.config.operator }}
+          {{ data.workNode.config.compareValue }}</span
+        >
+      </div>
       <div v-if="executionErrorMessage" class="node-error-banner">
         ⚠️ {{ executionErrorMessage }}
       </div>
@@ -32,7 +39,8 @@ const nodeRendererStrings = UI_STRINGS.nodeRenderers;
 </template>
 
 <style scoped>
-.node-end {
-  border-left: 4px solid #ef4444;
+.node-if-else {
+  border-left: 4px solid #f59e0b;
+  min-height: 60px;
 }
 </style>
