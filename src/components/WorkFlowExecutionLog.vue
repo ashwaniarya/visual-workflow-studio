@@ -18,7 +18,7 @@ function clearLog() {
 }
 
 function formatPayload(payload: Record<string, unknown>): string {
-  return JSON.stringify(payload);
+  return JSON.stringify(payload, null, 2);
 }
 </script>
 
@@ -194,7 +194,8 @@ function formatPayload(payload: Record<string, unknown>): string {
 
 .log-payload {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -204,8 +205,11 @@ function formatPayload(payload: Record<string, unknown>): string {
 
 .log-payload--right {
   flex: 1;
-  justify-content: flex-end;
-  text-align: right;
+}
+
+.log-payload--left code,
+.log-payload--right code {
+  width: 100%;
 }
 
 .log-label {
@@ -218,11 +222,10 @@ function formatPayload(payload: Record<string, unknown>): string {
   color: var(--color-text-primary);
   font-family: var(--font-family-monospace);
   font-size: var(--font-size-body-small);
-  white-space: nowrap;
-  word-break: break-all;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: block;
 }
 
 .log-port {
@@ -260,7 +263,6 @@ function formatPayload(payload: Record<string, unknown>): string {
   }
 
   .log-payload--right {
-    justify-content: flex-start;
     text-align: left;
   }
 }
