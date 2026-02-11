@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useGlobalUIStore } from "../stores/globalUIStore";
 import BaseButton from "./primitives/BaseButton.vue";
 import BaseTypography from "./primitives/BaseTypography.vue";
@@ -14,25 +14,124 @@ const activeModalActionEntries = computed(() =>
 const isAnyModalActionRunning = computed(
   () => globalUIStore.activeModalActionKey !== null,
 );
+const modalDialogReference = ref<HTMLElement | null>(null);
+const previousFocusedElementReference = ref<HTMLElement | null>(null);
+const LOCAL_MODAL_ACCESSIBILITY_POLICY = {
+  titleElementId: "global-modal-title",
+  descriptionElementId: "global-modal-description",
+  focusableElementSelector:
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+} as const;
 
 function onModalActionClicked(actionKey: string) {
   globalUIStore.runModalActionByKey(actionKey);
 }
+
+function getFocusableElementsFromDialog(): HTMLElement[] {
+  const dialogElement = modalDialogReference.value;
+  if (!dialogElement) {
+    return [];
+  }
+
+  return Array.from(
+    dialogElement.querySelectorAll<HTMLElement>(
+      LOCAL_MODAL_ACCESSIBILITY_POLICY.focusableElementSelector,
+    ),
+  );
+}
+
+function focusFirstFocusableElementInDialog() {
+  const focusableElements = getFocusableElementsFromDialog();
+  const firstFocusableElement = focusableElements[0] ?? modalDialogReference.value;
+  firstFocusableElement?.focus();
+}
+
+function restoreFocusToPreviousElement() {
+  previousFocusedElementReference.value?.focus();
+  previousFocusedElementReference.value = null;
+}
+
+function onDocumentKeyDown(event: KeyboardEvent) {
+  if (!hasActiveModal.value) {
+    return;
+  }
+
+  if (event.key === "Escape" && !isAnyModalActionRunning.value) {
+    event.preventDefault();
+    globalUIStore.closeModal();
+    return;
+  }
+
+  if (event.key !== "Tab") {
+    return;
+  }
+
+  const focusableElements = getFocusableElementsFromDialog();
+  if (focusableElements.length === 0) {
+    event.preventDefault();
+    modalDialogReference.value?.focus();
+    return;
+  }
+
+  const firstFocusableElement = focusableElements[0];
+  const lastFocusableElement = focusableElements[focusableElements.length - 1];
+  const activeElement = document.activeElement as HTMLElement | null;
+
+  if (event.shiftKey && activeElement === firstFocusableElement) {
+    event.preventDefault();
+    lastFocusableElement.focus();
+    return;
+  }
+
+  if (!event.shiftKey && activeElement === lastFocusableElement) {
+    event.preventDefault();
+    firstFocusableElement.focus();
+  }
+}
+
+watch(hasActiveModal, async (isModalOpen) => {
+  if (isModalOpen) {
+    previousFocusedElementReference.value = document.activeElement as HTMLElement | null;
+    await nextTick();
+    focusFirstFocusableElementInDialog();
+    document.addEventListener("keydown", onDocumentKeyDown);
+    return;
+  }
+
+  document.removeEventListener("keydown", onDocumentKeyDown);
+  restoreFocusToPreviousElement();
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("keydown", onDocumentKeyDown);
+});
 </script>
 
 <template>
   <Teleport to="body">
     <div v-if="hasActiveModal" class="global-modal-backdrop">
       <div
+        ref="modalDialogReference"
         class="global-modal-content"
         role="dialog"
         aria-modal="true"
-        :aria-label="activeModal?.title"
+        tabindex="-1"
+        :aria-labelledby="LOCAL_MODAL_ACCESSIBILITY_POLICY.titleElementId"
+        :aria-describedby="LOCAL_MODAL_ACCESSIBILITY_POLICY.descriptionElementId"
       >
-        <BaseTypography as="h3" variant="headingSmall">
+        <BaseTypography
+          as="h3"
+          variant="headingSmall"
+          :id="LOCAL_MODAL_ACCESSIBILITY_POLICY.titleElementId"
+        >
           {{ activeModal?.title }}
         </BaseTypography>
-        <BaseTypography as="p" variant="body" tone="muted">
+        <BaseTypography
+          as="p"
+          variant="body"
+          tone="muted"
+          :id="LOCAL_MODAL_ACCESSIBILITY_POLICY.descriptionElementId"
+        >
           {{ activeModal?.message }}
         </BaseTypography>
 

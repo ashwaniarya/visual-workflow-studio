@@ -19,21 +19,33 @@
         element-type="select"
         class="header-theme-mode-input"
         :model-value="selectedThemeMode"
+        accessible-label="Select application theme mode"
         @update:model-value="onThemeModeChanged"
       >
         <option value="system">System</option>
         <option value="dark">Dark</option>
         <option value="light">Light</option>
       </BaseInput>
-      <BaseButton variant="ghost" size="small" @click="handleExport">
+      <BaseButton
+        variant="ghost"
+        size="small"
+        accessible-label="Export workflow as JSON file"
+        @click="handleExport"
+      >
         📤 Export
       </BaseButton>
-      <BaseButton variant="ghost" size="small" @click="handleImport">
+      <BaseButton
+        variant="ghost"
+        size="small"
+        accessible-label="Import workflow from JSON file"
+        @click="handleImport"
+      >
         📥 Import
       </BaseButton>
       <BaseButton
         variant="ghost"
         size="small"
+        accessible-label="Clear workflow after confirmation"
         @click="openClearWorkflowConfirmationModal"
       >
         🧹 Clear Workflow
@@ -42,6 +54,7 @@
         variant="ghost"
         size="small"
         :is-disabled="!canUndoUiAction"
+        accessible-label="Undo last workflow action"
         @click="handleUndoAction"
       >
         ↶ Undo
@@ -50,6 +63,7 @@
         variant="ghost"
         size="small"
         :is-disabled="!canRedoUiAction"
+        accessible-label="Redo last workflow action"
         @click="handleRedoAction"
       >
         ↷ Redo

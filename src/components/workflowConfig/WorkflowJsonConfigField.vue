@@ -8,6 +8,7 @@ interface WorkflowJsonConfigFieldProps {
   fieldKey: string
   modelValue: unknown
   placeholder?: string
+  inputControlId?: string
 }
 
 const properties = defineProps<WorkflowJsonConfigFieldProps>()
@@ -22,6 +23,7 @@ const LOCAL_VALIDATION_MESSAGES = {
 
 const jsonTextDraftValue = ref(formatJsonValue(properties.modelValue))
 const jsonValidationErrorMessage = ref('')
+const jsonValidationErrorMessageId = `${properties.inputControlId ?? `${properties.nodeId}-${properties.fieldKey}`}-json-error`
 
 watch(() => [properties.nodeId, properties.fieldKey, properties.modelValue], () => {
   if (jsonValidationErrorMessage.value) {
@@ -54,6 +56,9 @@ function formatJsonValue(value: unknown): string {
     class="field-json-input"
     :model-value="jsonTextDraftValue"
     :placeholder="properties.placeholder"
+    :control-id="properties.inputControlId"
+    :described-by-id="jsonValidationErrorMessage ? jsonValidationErrorMessageId : undefined"
+    :has-validation-error="Boolean(jsonValidationErrorMessage)"
     :state="jsonValidationErrorMessage ? 'error' : 'default'"
     @update:model-value="onJsonInputValueChange"
   />
@@ -63,6 +68,7 @@ function formatJsonValue(value: unknown): string {
     variant="caption"
     tone="danger"
     class="json-error-message"
+    :id="jsonValidationErrorMessageId"
   >
     {{ jsonValidationErrorMessage }}
   </BaseTypography>

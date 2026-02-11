@@ -41,6 +41,10 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
   const rawValue = workNode.value?.config[key];
   return Array.isArray(rawValue) ? (rawValue as Record<string, unknown>[]) : [];
 }
+
+function buildConfigFieldControlId(fieldKey: string): string {
+  return `node-config-${workNode.value?.id ?? "unknown-node"}-${fieldKey}`;
+}
 </script>
 
 <template>
@@ -59,6 +63,7 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
         <BaseButton
           variant="ghost"
           size="small"
+          accessible-label="Close node configuration panel"
           @click="workflowGraphStore.setSelectedNode(null)"
         >
           ✕
@@ -72,10 +77,15 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
             variant="caption"
             tone="secondary"
             class="field-label"
+            :for="buildConfigFieldControlId('node-id')"
           >
             Node ID
           </BaseTypography>
-          <BaseInput :model-value="workNode.id" :is-disabled="true" />
+          <BaseInput
+            :model-value="workNode.id"
+            :is-disabled="true"
+            :control-id="buildConfigFieldControlId('node-id')"
+          />
         </div>
 
         <template v-for="field in configSchema" :key="field.key">
@@ -85,6 +95,7 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
               variant="caption"
               tone="secondary"
               class="field-label"
+              :for="buildConfigFieldControlId(field.key)"
             >
               {{ field.label }}
             </BaseTypography>
@@ -93,6 +104,7 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
               v-if="field.fieldType === 'text'"
               :model-value="getStringFieldValue(field.key)"
               :placeholder="field.placeholder"
+              :control-id="buildConfigFieldControlId(field.key)"
               @update:model-value="onFieldChange(field.key, $event)"
             />
 
@@ -101,6 +113,7 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
               input-type="number"
               :model-value="getStringFieldValue(field.key)"
               :placeholder="field.placeholder"
+              :control-id="buildConfigFieldControlId(field.key)"
               @update:model-value="onFieldChange(field.key, Number($event))"
             />
 
@@ -108,6 +121,7 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
               v-else-if="field.fieldType === 'select'"
               element-type="select"
               :model-value="getStringFieldValue(field.key)"
+              :control-id="buildConfigFieldControlId(field.key)"
               @update:model-value="onFieldChange(field.key, $event)"
             >
               <option
@@ -125,14 +139,17 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
               :field-key="field.key"
               :model-value="workNode.config[field.key]"
               :placeholder="field.placeholder"
+              :input-control-id="buildConfigFieldControlId(field.key)"
               @update:model-value="onFieldChange(field.key, $event)"
             />
 
             <label
               v-else-if="field.fieldType === 'checkbox'"
               class="field-checkbox"
+              :for="buildConfigFieldControlId(field.key)"
             >
               <input
+                :id="buildConfigFieldControlId(field.key)"
                 type="checkbox"
                 :checked="workNode.config[field.key] as boolean"
                 @change="
@@ -151,6 +168,7 @@ function getArrayEntries(key: string): Record<string, unknown>[] {
               v-else-if="field.fieldType === 'array'"
               :field="field"
               :model-value="getArrayEntries(field.key)"
+              :field-control-id-prefix="buildConfigFieldControlId(field.key)"
               @update:model-value="onFieldChange(field.key, $event)"
             />
           </div>

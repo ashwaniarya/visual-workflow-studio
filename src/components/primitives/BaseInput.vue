@@ -9,6 +9,11 @@ interface BaseInputProps {
   modelValue?: string | number;
   elementType?: InputElementType;
   inputType?: string;
+  controlId?: string;
+  accessibleLabel?: string;
+  describedById?: string;
+  isRequired?: boolean;
+  hasValidationError?: boolean;
   placeholder?: string;
   isDisabled?: boolean;
   state?: InputVisualState;
@@ -19,6 +24,11 @@ const properties = withDefaults(defineProps<BaseInputProps>(), {
   modelValue: "",
   elementType: "input",
   inputType: "text",
+  controlId: undefined,
+  accessibleLabel: undefined,
+  describedById: undefined,
+  isRequired: false,
+  hasValidationError: false,
   placeholder: "",
   isDisabled: false,
   state: "default",
@@ -34,6 +44,9 @@ const inputClassNames = computed(() => [
   `base-input--${properties.state}`,
   `base-input--${properties.size}`,
 ]);
+const isValidationError = computed(
+  () => properties.hasValidationError || properties.state === "error",
+);
 
 function emitInputValue(event: Event) {
   const target = event.target as
@@ -50,7 +63,12 @@ function emitInputValue(event: Event) {
     :type="
       properties.elementType === 'input' ? properties.inputType : undefined
     "
+    :id="properties.controlId"
     :class="inputClassNames"
+    :aria-label="properties.accessibleLabel"
+    :aria-describedby="properties.describedById"
+    :aria-invalid="isValidationError || undefined"
+    :required="properties.isRequired"
     :placeholder="properties.placeholder"
     :value="properties.modelValue"
     :disabled="properties.isDisabled"
@@ -68,7 +86,8 @@ function emitInputValue(event: Event) {
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-medium);
   color: var(--color-text-primary);
-  outline: none;
+  outline: 2px solid transparent;
+  outline-offset: 1px;
   transition: border-color 0.15s ease;
 }
 
@@ -76,8 +95,10 @@ function emitInputValue(event: Event) {
   color: var(--color-text-muted);
 }
 
-.base-input:focus {
+.base-input:focus-visible {
   border-color: var(--color-accent-primary);
+  outline-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-primary) 28%, transparent);
 }
 
 .base-input:disabled {

@@ -20,11 +20,13 @@ function onDragStart(event: DragEvent, nodeType: string) {
     variant="outlined"
     padding="large"
     class="workflow-toolbar"
+    role="complementary"
+    aria-label="Workflow node library"
   >
     <BaseTypography as="h3" variant="headingSmall" class="toolbar-title">
       📦 Nodes
     </BaseTypography>
-    <div class="toolbar-node-list">
+    <div class="toolbar-node-list" role="list" aria-label="Draggable workflow nodes">
       <BaseSurface
         v-for="definition in nodeDefinitions"
         :key="definition.type"
@@ -32,6 +34,9 @@ function onDragStart(event: DragEvent, nodeType: string) {
         variant="outlined"
         padding="medium"
         class="toolbar-node-item"
+        role="listitem"
+        :aria-label="`${definition.label} node in ${definition.category} category`"
+        :title="`Drag ${definition.label} to canvas`"
         draggable="true"
         @dragstart="onDragStart($event, definition.type)"
       >

@@ -33,17 +33,23 @@ function formatPayload(payload: Record<string, unknown>): string {
           variant="primary"
           size="small"
           :is-disabled="isExecuting"
+          :accessible-label="isExecuting ? 'Workflow execution in progress' : 'Run workflow execution'"
           @click="runWorkflow"
         >
           {{ isExecuting ? "⏳ Running..." : "▶ Run" }}
         </BaseButton>
-        <BaseButton variant="secondary" size="small" @click="clearLog">
+        <BaseButton
+          variant="secondary"
+          size="small"
+          accessible-label="Clear workflow execution log"
+          @click="clearLog"
+        >
           🗑 Clear
         </BaseButton>
       </div>
     </div>
 
-    <div class="log-body">
+    <div class="log-body" role="log" aria-live="polite" aria-label="Workflow execution results">
       <template v-if="executionLog.length === 0">
         <div class="log-empty">
           <p>
@@ -62,6 +68,8 @@ function formatPayload(payload: Record<string, unknown>): string {
           padding="small"
           class="log-entry"
           :class="{ 'log-error': entry.status === 'error' }"
+          role="article"
+          :aria-label="`Execution step ${entry.stepNumber} with ${entry.status} status`"
         >
           <div class="log-entry-header">
             <span class="log-step">Step {{ entry.stepNumber }}</span>

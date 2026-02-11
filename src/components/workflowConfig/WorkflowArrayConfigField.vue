@@ -8,6 +8,7 @@ import BaseTypography from '../primitives/BaseTypography.vue'
 interface WorkflowArrayConfigFieldProps {
   field: ConfigFieldDefinition
   modelValue: Record<string, unknown>[]
+  fieldControlIdPrefix?: string
 }
 
 const properties = defineProps<WorkflowArrayConfigFieldProps>()
@@ -39,6 +40,13 @@ function removeArrayEntry(entryIndex: number): void {
   updatedEntries.splice(entryIndex, 1)
   emit('update:modelValue', updatedEntries)
 }
+
+function buildArrayEntryFieldControlId(entryIndex: number, itemFieldKey: string): string {
+  if (!properties.fieldControlIdPrefix) {
+    return `${properties.field.key}-${entryIndex}-${itemFieldKey}`
+  }
+  return `${properties.fieldControlIdPrefix}-${entryIndex}-${itemFieldKey}`
+}
 </script>
 
 <template>
@@ -58,6 +66,7 @@ function removeArrayEntry(entryIndex: number): void {
         <BaseButton
           variant="ghost"
           size="small"
+          :accessible-label="`Remove ${properties.field.label} entry ${entryIndex + 1}`"
           @click="removeArrayEntry(entryIndex)"
         >
           ✕
@@ -69,7 +78,13 @@ function removeArrayEntry(entryIndex: number): void {
         :key="`${properties.field.key}-${entryIndex}-${itemField.key}`"
         class="array-item-field"
       >
-        <BaseTypography as="label" variant="caption" tone="secondary" class="field-label">
+        <BaseTypography
+          as="label"
+          variant="caption"
+          tone="secondary"
+          class="field-label"
+          :for="buildArrayEntryFieldControlId(entryIndex, itemField.key)"
+        >
           {{ itemField.label }}
         </BaseTypography>
 
@@ -77,6 +92,7 @@ function removeArrayEntry(entryIndex: number): void {
           v-if="itemField.fieldType === 'text'"
           :model-value="String((entry as Record<string, unknown>)[itemField.key] ?? '')"
           :placeholder="itemField.placeholder"
+          :control-id="buildArrayEntryFieldControlId(entryIndex, itemField.key)"
           @update:model-value="onArrayEntryFieldChange(entryIndex, itemField.key, $event)"
         />
 
@@ -85,6 +101,7 @@ function removeArrayEntry(entryIndex: number): void {
           input-type="number"
           :model-value="String((entry as Record<string, unknown>)[itemField.key] ?? '')"
           :placeholder="itemField.placeholder"
+          :control-id="buildArrayEntryFieldControlId(entryIndex, itemField.key)"
           @update:model-value="onArrayEntryFieldChange(entryIndex, itemField.key, Number($event))"
         />
 
@@ -92,6 +109,7 @@ function removeArrayEntry(entryIndex: number): void {
           v-else-if="itemField.fieldType === 'select'"
           element-type="select"
           :model-value="String((entry as Record<string, unknown>)[itemField.key] ?? '')"
+          :control-id="buildArrayEntryFieldControlId(entryIndex, itemField.key)"
           @update:model-value="onArrayEntryFieldChange(entryIndex, itemField.key, $event)"
         >
           <option v-for="option in itemField.options" :key="option" :value="option">

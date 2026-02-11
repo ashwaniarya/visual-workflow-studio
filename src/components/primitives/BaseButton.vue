@@ -8,6 +8,8 @@ interface BaseButtonProps {
   type?: "button" | "submit" | "reset";
   variant?: ButtonVariant;
   size?: ButtonSize;
+  accessibleLabel?: string;
+  loadingLabel?: string;
   isLoading?: boolean;
   isDisabled?: boolean;
 }
@@ -16,6 +18,8 @@ const properties = withDefaults(defineProps<BaseButtonProps>(), {
   type: "button",
   variant: "secondary",
   size: "medium",
+  accessibleLabel: undefined,
+  loadingLabel: "Loading",
   isLoading: false,
   isDisabled: false,
 });
@@ -35,9 +39,12 @@ const buttonClassNames = computed(() => [
     :type="properties.type"
     :disabled="isButtonDisabled"
     :class="buttonClassNames"
+    :aria-label="properties.accessibleLabel"
+    :aria-disabled="isButtonDisabled"
+    :aria-busy="properties.isLoading || undefined"
   >
     <slot v-if="!properties.isLoading" />
-    <span v-else class="base-button-loading-content">Loading...</span>
+    <span v-else class="base-button-loading-content">{{ properties.loadingLabel }}...</span>
   </button>
 </template>
 
@@ -57,6 +64,11 @@ const buttonClassNames = computed(() => [
 .base-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.base-button:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
 }
 
 .base-button--small {

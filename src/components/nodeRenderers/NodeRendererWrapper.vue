@@ -18,8 +18,9 @@ function handleDeleteNode() {
       class="node-delete-button"
       @click.stop="handleDeleteNode"
       title="Delete node"
+      aria-label="Delete node"
     >
-      🗑️
+      <span aria-hidden="true">🗑️</span>
     </button>
     <slot />
   </div>
@@ -62,5 +63,11 @@ function handleDeleteNode() {
   background: #f38ba8;
   color: #1e1e2e;
   border-color: #f38ba8;
+}
+
+.node-delete-button:focus-visible {
+  opacity: 1;
+  outline: 2px solid #f38ba8;
+  outline-offset: 2px;
 }
 </style>
