@@ -1,6 +1,8 @@
 # Project Overview
 
-Visual Workflow Studio is a visual DAG editor built with Vue 3 and TypeScript. You drag nodes onto a canvas, connect them into a workflow, configure behavior per node, and run the flow to inspect execution logs step by step.
+
+
+Visual Workflow Studio is a visual DAG editor to help business automate their business operation. I was built with Vue 3 and TypeScript. You drag nodes onto a canvas, connect them into a workflow, configure behavior per node, and run the flow to inspect execution logs step by step.
 
 Today the built-in node types are `START`, `TRANSFORM`, `IFELSE`, `SWITCH`, and `END`. The execution engine moves through the graph by following the output port selected by each node executor. Workflows can be exported/imported as JSON, and canvas state is autosaved locally.
 
