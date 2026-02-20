@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useWorkflowGraphStore } from "../../stores/workflowGraphStore";
+import { UI_STRINGS } from "../../localization/uiStrings";
 
 const props = defineProps<{
   nodeId: string;
 }>();
 
 const workflowGraphStore = useWorkflowGraphStore();
+const nodeRendererStrings = UI_STRINGS.nodeRenderers;
 
 function handleDeleteNode() {
   workflowGraphStore.removeNode(props.nodeId);
@@ -17,8 +19,8 @@ function handleDeleteNode() {
     <button
       class="node-delete-button"
       @click.stop="handleDeleteNode"
-      title="Delete node"
-      aria-label="Delete node"
+      :title="nodeRendererStrings.deleteNodeButtonTitle"
+      :aria-label="nodeRendererStrings.deleteNodeButtonAriaLabel"
     >
       <span aria-hidden="true">🗑️</span>
     </button>

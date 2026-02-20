@@ -3,6 +3,7 @@ import type { PortDefinition } from "../../models/ports";
 import DynamicHandleRenderer from "./DynamicHandleRenderer.vue";
 import NodeRendererWrapper from "./NodeRendererWrapper.vue";
 import { useNodeExecutionState } from "../../composables/useNodeExecutionState";
+import { UI_STRINGS } from "../../localization/uiStrings";
 
 const props = defineProps<{
   id: string;
@@ -15,6 +16,7 @@ const props = defineProps<{
 const { executionCssClass, executionErrorMessage } = useNodeExecutionState(
   props.id,
 );
+const nodeRendererStrings = UI_STRINGS.nodeRenderers;
 
 function caseCount(): number {
   const cases = props.data.workNode.config.cases as unknown[];
@@ -25,11 +27,11 @@ function caseCount(): number {
 <template>
   <NodeRendererWrapper :nodeId="id">
     <div class="node-renderer node-switch" :class="executionCssClass">
-      <div class="node-header">🔀 Switch</div>
+      <div class="node-header">{{ nodeRendererStrings.switchNodeHeader }}</div>
       <div class="node-body">
         <span class="node-preview"
-          >{{ data.workNode.config.targetField || "—" }} ·
-          {{ caseCount() }} cases</span
+          >{{ data.workNode.config.targetField || "—" }} · {{ caseCount() }}
+          {{ nodeRendererStrings.switchCaseLabel }}</span
         >
       </div>
       <div v-if="executionErrorMessage" class="node-error-banner">

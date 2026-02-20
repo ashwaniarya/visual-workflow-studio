@@ -1,51 +1,81 @@
 <script setup lang="ts">
-import type { ConfigFieldDefinition } from '../../models/configSchema'
-import BaseButton from '../primitives/BaseButton.vue'
-import BaseInput from '../primitives/BaseInput.vue'
-import BaseSurface from '../primitives/BaseSurface.vue'
-import BaseTypography from '../primitives/BaseTypography.vue'
+import type { ConfigFieldDefinition } from "../../models/configSchema";
+import BaseButton from "../primitives/BaseButton.vue";
+import BaseInput from "../primitives/BaseInput.vue";
+import BaseSurface from "../primitives/BaseSurface.vue";
+import BaseTypography from "../primitives/BaseTypography.vue";
+import { UI_STRINGS } from "../../localization/uiStrings";
 
 interface WorkflowArrayConfigFieldProps {
-  field: ConfigFieldDefinition
-  modelValue: Record<string, unknown>[]
-  fieldControlIdPrefix?: string
+  field: ConfigFieldDefinition;
+  modelValue: Record<string, unknown>[];
+  fieldControlIdPrefix?: string;
 }
 
-const properties = defineProps<WorkflowArrayConfigFieldProps>()
+const properties = defineProps<WorkflowArrayConfigFieldProps>();
 
 const emit = defineEmits<{
-  (eventName: 'update:modelValue', value: Record<string, unknown>[]): void
-}>()
+  (eventName: "update:modelValue", value: Record<string, unknown>[]): void;
+}>();
+const workflowArrayStrings = UI_STRINGS.workflowArrayConfigField;
 
-function onArrayEntryFieldChange(entryIndex: number, fieldKey: string, value: unknown): void {
-  const updatedEntries = [...properties.modelValue]
-  updatedEntries[entryIndex] = { ...updatedEntries[entryIndex], [fieldKey]: value }
-  emit('update:modelValue', updatedEntries)
+function onArrayEntryFieldChange(
+  entryIndex: number,
+  fieldKey: string,
+  value: unknown,
+): void {
+  const updatedEntries = [...properties.modelValue];
+  updatedEntries[entryIndex] = {
+    ...updatedEntries[entryIndex],
+    [fieldKey]: value,
+  };
+  emit("update:modelValue", updatedEntries);
 }
 
 function addArrayEntry(): void {
-  const updatedEntries = [...properties.modelValue]
-  const newEntry: Record<string, unknown> = {}
+  const updatedEntries = [...properties.modelValue];
+  const newEntry: Record<string, unknown> = {};
 
   for (const itemField of properties.field.itemFields ?? []) {
-    newEntry[itemField.key] = itemField.defaultValue ?? ''
+    newEntry[itemField.key] = itemField.defaultValue ?? "";
   }
 
-  updatedEntries.push(newEntry)
-  emit('update:modelValue', updatedEntries)
+  updatedEntries.push(newEntry);
+  emit("update:modelValue", updatedEntries);
 }
 
 function removeArrayEntry(entryIndex: number): void {
-  const updatedEntries = [...properties.modelValue]
-  updatedEntries.splice(entryIndex, 1)
-  emit('update:modelValue', updatedEntries)
+  const updatedEntries = [...properties.modelValue];
+  updatedEntries.splice(entryIndex, 1);
+  emit("update:modelValue", updatedEntries);
 }
 
-function buildArrayEntryFieldControlId(entryIndex: number, itemFieldKey: string): string {
+function buildArrayEntryFieldControlId(
+  entryIndex: number,
+  itemFieldKey: string,
+): string {
   if (!properties.fieldControlIdPrefix) {
-    return `${properties.field.key}-${entryIndex}-${itemFieldKey}`
+    return `${properties.field.key}-${entryIndex}-${itemFieldKey}`;
   }
-  return `${properties.fieldControlIdPrefix}-${entryIndex}-${itemFieldKey}`
+  return `${properties.fieldControlIdPrefix}-${entryIndex}-${itemFieldKey}`;
+}
+
+function buildSingularFieldLabel(): string {
+  const rawLabel = properties.field.label?.trim();
+  if (!rawLabel) {
+    return workflowArrayStrings.defaultEntryLabel;
+  }
+  return rawLabel.replace(/s$/, "") || rawLabel;
+}
+
+function buildAddButtonLabel(): string {
+  return `${workflowArrayStrings.addButtonPrefix} ${buildSingularFieldLabel()}`;
+}
+
+function buildRemoveEntryAccessibleLabel(entryIndex: number): string {
+  const labelText =
+    properties.field.label?.trim() || workflowArrayStrings.defaultEntryLabel;
+  return `${workflowArrayStrings.removeEntryAccessibleLabelPrefix} ${labelText} ${workflowArrayStrings.removeEntrySuffix} ${entryIndex + 1}`;
 }
 </script>
 
@@ -66,7 +96,7 @@ function buildArrayEntryFieldControlId(entryIndex: number, itemFieldKey: string)
         <BaseButton
           variant="ghost"
           size="small"
-          :accessible-label="`Remove ${properties.field.label} entry ${entryIndex + 1}`"
+          :accessible-label="buildRemoveEntryAccessibleLabel(entryIndex)"
           @click="removeArrayEntry(entryIndex)"
         >
           ✕
@@ -90,37 +120,58 @@ function buildArrayEntryFieldControlId(entryIndex: number, itemFieldKey: string)
 
         <BaseInput
           v-if="itemField.fieldType === 'text'"
-          :model-value="String((entry as Record<string, unknown>)[itemField.key] ?? '')"
+          :model-value="
+            String((entry as Record<string, unknown>)[itemField.key] ?? '')
+          "
           :placeholder="itemField.placeholder"
           :control-id="buildArrayEntryFieldControlId(entryIndex, itemField.key)"
-          @update:model-value="onArrayEntryFieldChange(entryIndex, itemField.key, $event)"
+          @update:model-value="
+            onArrayEntryFieldChange(entryIndex, itemField.key, $event)
+          "
         />
 
         <BaseInput
           v-else-if="itemField.fieldType === 'number'"
           input-type="number"
-          :model-value="String((entry as Record<string, unknown>)[itemField.key] ?? '')"
+          :model-value="
+            String((entry as Record<string, unknown>)[itemField.key] ?? '')
+          "
           :placeholder="itemField.placeholder"
           :control-id="buildArrayEntryFieldControlId(entryIndex, itemField.key)"
-          @update:model-value="onArrayEntryFieldChange(entryIndex, itemField.key, Number($event))"
+          @update:model-value="
+            onArrayEntryFieldChange(entryIndex, itemField.key, Number($event))
+          "
         />
 
         <BaseInput
           v-else-if="itemField.fieldType === 'select'"
           element-type="select"
-          :model-value="String((entry as Record<string, unknown>)[itemField.key] ?? '')"
+          :model-value="
+            String((entry as Record<string, unknown>)[itemField.key] ?? '')
+          "
           :control-id="buildArrayEntryFieldControlId(entryIndex, itemField.key)"
-          @update:model-value="onArrayEntryFieldChange(entryIndex, itemField.key, $event)"
+          @update:model-value="
+            onArrayEntryFieldChange(entryIndex, itemField.key, $event)
+          "
         >
-          <option v-for="option in itemField.options" :key="option" :value="option">
+          <option
+            v-for="option in itemField.options"
+            :key="option"
+            :value="option"
+          >
             {{ option }}
           </option>
         </BaseInput>
       </div>
     </BaseSurface>
 
-    <BaseButton variant="secondary" size="small" class="array-add-button" @click="addArrayEntry">
-      + Add {{ properties.field.label?.replace(/s$/, '') || 'Entry' }}
+    <BaseButton
+      variant="secondary"
+      size="small"
+      class="array-add-button"
+      @click="addArrayEntry"
+    >
+      {{ buildAddButtonLabel() }}
     </BaseButton>
   </template>
 </template>

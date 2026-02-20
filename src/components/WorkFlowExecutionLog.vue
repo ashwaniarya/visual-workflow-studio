@@ -4,10 +4,12 @@ import { useWorkflowExecutionStore } from "../stores/workflowExecutionStore";
 import BaseButton from "./primitives/BaseButton.vue";
 import BaseSurface from "./primitives/BaseSurface.vue";
 import BaseTypography from "./primitives/BaseTypography.vue";
+import { UI_STRINGS } from "../localization/uiStrings";
 
 const workflowExecutionStore = useWorkflowExecutionStore();
 const executionLog = computed(() => workflowExecutionStore.executionLog);
 const isExecuting = computed(() => workflowExecutionStore.isExecuting);
+const executionLogStrings = UI_STRINGS.workflowExecutionLog;
 
 function runWorkflow() {
   workflowExecutionStore.runWorkflow();
@@ -26,35 +28,49 @@ function formatPayload(payload: Record<string, unknown>): string {
   <div class="execution-log-panel">
     <div class="log-header">
       <BaseTypography as="h3" variant="headingSmall" class="log-title">
-        📋 Execution Log
+        {{ executionLogStrings.title }}
       </BaseTypography>
       <div class="log-actions">
         <BaseButton
           variant="primary"
           size="small"
           :is-disabled="isExecuting"
-          :accessible-label="isExecuting ? 'Workflow execution in progress' : 'Run workflow execution'"
+          :accessible-label="
+            isExecuting
+              ? executionLogStrings.runButton.accessibleLabel.running
+              : executionLogStrings.runButton.accessibleLabel.default
+          "
           @click="runWorkflow"
         >
-          {{ isExecuting ? "⏳ Running..." : "▶ Run" }}
+          {{
+            isExecuting
+              ? executionLogStrings.runButton.runningLabel
+              : executionLogStrings.runButton.defaultLabel
+          }}
         </BaseButton>
         <BaseButton
           variant="secondary"
           size="small"
-          accessible-label="Clear workflow execution log"
+          :accessible-label="executionLogStrings.clearButton.accessibleLabel"
           @click="clearLog"
         >
-          🗑 Clear
+          {{ executionLogStrings.clearButton.label }}
         </BaseButton>
       </div>
     </div>
 
-    <div class="log-body" role="log" aria-live="polite" aria-label="Workflow execution results">
+    <div
+      class="log-body"
+      role="log"
+      aria-live="polite"
+      :aria-label="executionLogStrings.ariaLabel"
+    >
       <template v-if="executionLog.length === 0">
         <div class="log-empty">
           <p>
-            No execution log yet. Build a workflow and click
-            <strong>Run</strong>.
+            {{ executionLogStrings.emptyState.prefix }}
+            <strong>{{ executionLogStrings.emptyState.actionLabel }}</strong
+            >.
           </p>
         </div>
       </template>
@@ -72,7 +88,10 @@ function formatPayload(payload: Record<string, unknown>): string {
           :aria-label="`Execution step ${entry.stepNumber} with ${entry.status} status`"
         >
           <div class="log-entry-header">
-            <span class="log-step">Step {{ entry.stepNumber }}</span>
+            <span class="log-step"
+              >{{ executionLogStrings.logLabels.step }}
+              {{ entry.stepNumber }}</span
+            >
             <span class="log-node-type">{{ entry.nodeType }}</span>
             <span class="log-status" :class="entry.status">{{
               entry.status
@@ -82,19 +101,24 @@ function formatPayload(payload: Record<string, unknown>): string {
           <div class="log-entry-body">
             <div class="log-payload-row">
               <div class="log-payload log-payload--left">
-                <span class="log-label">In:</span>
+                <span class="log-label">{{
+                  executionLogStrings.logLabels.input
+                }}</span>
                 <code>{{ formatPayload(entry.inputPayload) }}</code>
               </div>
               <div class="log-payload log-payload--right">
-                <span class="log-label">Out:</span>
+                <span class="log-label">{{
+                  executionLogStrings.logLabels.output
+                }}</span>
                 <code>{{ formatPayload(entry.outputPayload) }}</code>
               </div>
             </div>
             <div v-if="entry.selectedPortId" class="log-port">
-              → Port: <strong>{{ entry.selectedPortId }}</strong>
+              {{ executionLogStrings.logLabels.port }}
+              <strong>{{ entry.selectedPortId }}</strong>
               <span v-if="entry.nextNodeId">
-                → Next: {{ entry.nextNodeId }}</span
-              >
+                {{ executionLogStrings.logLabels.next }} {{ entry.nextNodeId }}
+              </span>
             </div>
             <div v-if="entry.errorMessage" class="log-error-message">
               ⚠ {{ entry.errorMessage }}

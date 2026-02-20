@@ -1,7 +1,7 @@
 <template>
   <header class="app-header">
     <BaseTypography as="h1" variant="headingMedium" class="app-title">
-      ⚡ Visual Workflow Studio
+      {{ appStrings.headerTitle }}
     </BaseTypography>
 
     <div class="header-actions">
@@ -12,61 +12,69 @@
       >
         <span class="autosave-spinner" aria-hidden="true"></span>
         <BaseTypography as="span" variant="caption" tone="muted">
-          Saving
+          {{ appStrings.autosaveIndicatorLabel }}
         </BaseTypography>
       </div>
       <BaseInput
         element-type="select"
         class="header-theme-mode-input"
         :model-value="selectedThemeMode"
-        accessible-label="Select application theme mode"
+        :accessible-label="headerStrings.themeSelectionAccessibleLabel"
         @update:model-value="onThemeModeChanged"
       >
-        <option value="system">System</option>
-        <option value="dark">Dark</option>
-        <option value="light">Light</option>
+        <option value="system">
+          {{ headerStrings.themeModeOptions.system }}
+        </option>
+        <option value="dark">{{ headerStrings.themeModeOptions.dark }}</option>
+        <option value="light">
+          {{ headerStrings.themeModeOptions.light }}
+        </option>
       </BaseInput>
       <BaseButton
         variant="ghost"
         size="small"
-        accessible-label="Export workflow as JSON file"
+        :accessible-label="headerActionButtons.exportWorkflow.accessibleLabel"
         @click="handleExport"
       >
-        📤 Export
+        {{ headerActionButtons.exportWorkflow.label }}
       </BaseButton>
       <BaseButton
         variant="ghost"
         size="small"
-        accessible-label="Import workflow from JSON file"
+        :accessible-label="headerActionButtons.importWorkflow.accessibleLabel"
         @click="handleImport"
       >
-        📥 Import
+        {{ headerActionButtons.importWorkflow.label }}
       </BaseButton>
       <BaseButton
         variant="ghost"
         size="small"
-        accessible-label="Clear workflow after confirmation"
+        :accessible-label="headerActionButtons.clearWorkflow.accessibleLabel"
         @click="openClearWorkflowConfirmationModal"
       >
-        🧹 Clear Workflow
+        {{ headerActionButtons.clearWorkflow.label }}
       </BaseButton>
       <BaseButton
         variant="ghost"
         size="small"
         :is-disabled="!canUndoUiAction"
-        accessible-label="Undo last workflow action"
+        :accessible-label="
+          headerActionButtons.undoWorkflowAction.accessibleLabel
+        "
         @click="handleUndoAction"
       >
-        ↶ Undo
+        {{ headerActionButtons.undoWorkflowAction.label }}
       </BaseButton>
       <BaseButton
         variant="ghost"
         size="small"
         :is-disabled="!canRedoUiAction"
-        accessible-label="Redo last workflow action"
+        :accessible-label="
+          headerActionButtons.redoWorkflowAction.accessibleLabel
+        "
         @click="handleRedoAction"
       >
-        ↷ Redo
+        {{ headerActionButtons.redoWorkflowAction.label }}
       </BaseButton>
       <input
         ref="fileInputReference"
@@ -93,6 +101,7 @@ import {
 import BaseButton from "./primitives/BaseButton.vue";
 import BaseInput from "./primitives/BaseInput.vue";
 import BaseTypography from "./primitives/BaseTypography.vue";
+import { UI_STRINGS } from "../localization/uiStrings";
 
 const workflowGraphStore = useWorkflowGraphStore();
 const workflowHistoryStore = useWorkflowHistoryStore();
@@ -109,6 +118,11 @@ const isWorkflowAutosaveInProgress = computed(
 );
 const canUndoUiAction = computed(() => workflowHistoryStore.canUndoUiAction);
 const canRedoUiAction = computed(() => workflowHistoryStore.canRedoUiAction);
+const appStrings = UI_STRINGS.app;
+const headerStrings = UI_STRINGS.appHeader;
+const headerActionButtons = headerStrings.actionButtons;
+const clearWorkflowModalStrings = UI_STRINGS.modal.clearWorkflow;
+const clearWorkflowModalActions = clearWorkflowModalStrings.actions;
 
 function handleExport() {
   const jsonString = workflowPersistenceStore.exportWorkflow(
@@ -135,17 +149,17 @@ function handleImport() {
 
 function openClearWorkflowConfirmationModal() {
   globalUIStore.openModal({
-    title: "Clear workflow?",
-    message: "Are you sure you want to clear?",
+    title: clearWorkflowModalStrings.title,
+    message: clearWorkflowModalStrings.message,
     actionButtonMap: {
       dismissClearWorkflowModal: {
-        buttonLabel: "No",
-        buttonVariant: "secondary",
+        buttonLabel: clearWorkflowModalActions.cancel.buttonLabel,
+        buttonVariant: clearWorkflowModalActions.cancel.buttonVariant,
         callback: () => "dismiss" as const,
       },
       confirmClearWorkflowData: {
-        buttonLabel: "Yes",
-        buttonVariant: "danger",
+        buttonLabel: clearWorkflowModalActions.confirm.buttonLabel,
+        buttonVariant: clearWorkflowModalActions.confirm.buttonVariant,
         callback: async () => {
           await workflowPersistenceStore.waitForAutosaveToSettle();
           workflowGraphStore.replaceGraphData([], [], {

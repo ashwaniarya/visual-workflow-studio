@@ -19,7 +19,7 @@ import { WORKFLOW_CONSTANTS } from "../config/workflowConstants";
 
 import StartNodeRenderer from "./nodeRenderers/StartNodeRenderer.vue";
 import TransformNodeRenderer from "./nodeRenderers/TransformNodeRenderer.vue";
-import DecisionNodeRenderer from "./nodeRenderers/DecisionNodeRenderer.vue";
+import IfElseNodeRenderer from "./nodeRenderers/IfElseNodeRenderer.vue";
 import SwitchNodeRenderer from "./nodeRenderers/SwitchNodeRenderer.vue";
 import EndNodeRenderer from "./nodeRenderers/EndNodeRenderer.vue";
 import DeletableEdgeRenderer from "./edgeRenderers/DeletableEdgeRenderer.vue";
@@ -152,8 +152,8 @@ function onVueFlowInit(flowInstance: {
       <template #node-TRANSFORM="nodeProps">
         <TransformNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
       </template>
-      <template #node-DECISION="nodeProps">
-        <DecisionNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
+      <template #node-IFELSE="nodeProps">
+        <IfElseNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
       </template>
       <template #node-SWITCH="nodeProps">
         <SwitchNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />

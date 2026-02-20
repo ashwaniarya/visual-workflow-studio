@@ -157,18 +157,19 @@ export function createRemoveNodeCommand(
     applyRemoveNodePrimitive,
     applyAddEdgePrimitive,
   } = dependencies
-  let removedNodeSnapshot: RenderWorkNodeSnapshot | null = null
-  let removedIncidentEdgeSnapshots: Edge[] = []
+
+  const nodeToRemove = getNodeById(nodeId)
+  const removedNodeSnapshot = nodeToRemove ? snapshotRenderWorkNode(nodeToRemove) : null
+  const removedIncidentEdgeSnapshots = nodeToRemove
+    ? getIncidentEdgesByNodeId(nodeId).map(cloneEdge)
+    : []
 
   return {
     type: 'REMOVE_NODE',
     execute: () => {
-      const existingNode = getNodeById(nodeId)
-      if (!existingNode) {
+      if (!removedNodeSnapshot) {
         return false
       }
-      removedNodeSnapshot = snapshotRenderWorkNode(existingNode)
-      removedIncidentEdgeSnapshots = getIncidentEdgesByNodeId(nodeId).map(cloneEdge)
       return applyRemoveNodePrimitive(nodeId)
     },
     undo: () => {
@@ -210,16 +211,15 @@ export function createRemoveEdgeCommand(
   dependencies: RemoveEdgeCommandDependencies,
 ): WorkflowCommand {
   const { edgeId, getEdgeById, applyAddEdgePrimitive, applyRemoveEdgePrimitive } = dependencies
-  let removedEdgeSnapshot: Edge | null = null
+  const edgeToRemove = getEdgeById(edgeId)
+  const removedEdgeSnapshot = edgeToRemove ? cloneEdge(edgeToRemove) : null
 
   return {
     type: 'REMOVE_EDGE',
     execute: () => {
-      const existingEdge = getEdgeById(edgeId)
-      if (!existingEdge) {
+      if (!removedEdgeSnapshot) {
         return false
       }
-      removedEdgeSnapshot = cloneEdge(existingEdge)
       return applyRemoveEdgePrimitive(edgeId)
     },
     undo: () => {

@@ -1,8 +1,10 @@
 # Project Overview
 
-Visual Workflow Studio is a visual DAG editor built with Vue 3 and TypeScript. You drag nodes onto a canvas, connect them into a workflow, configure behavior per node, and run the flow to inspect execution logs step by step.
 
-Today the built-in node types are `START`, `TRANSFORM`, `DECISION`, `SWITCH`, and `END`. The execution engine moves through the graph by following the output port selected by each node executor. Workflows can be exported/imported as JSON, and canvas state is autosaved locally.
+
+Visual Workflow Studio is a visual DAG editor to help business automate their business operation. I was built with Vue 3 and TypeScript. You drag nodes onto a canvas, connect them into a workflow, configure behavior per node, and run the flow to inspect execution logs step by step.
+
+Today the built-in node types are `START`, `TRANSFORM`, `IFELSE`, `SWITCH`, and `END`. The execution engine moves through the graph by following the output port selected by each node executor. Workflows can be exported/imported as JSON, and canvas state is autosaved locally.
 
 <img width="959" height="473" alt="image" src="https://github.com/user-attachments/assets/b7f6b187-e900-4567-a9c4-f75ea3e00cc8" />
 
@@ -10,11 +12,29 @@ Today the built-in node types are `START`, `TRANSFORM`, `DECISION`, `SWITCH`, an
 
 Setup Video
 
+https://www.loom.com/share/7d1827e242b14904b1f4dcfeb0f828f0
+
 Dashboard Demo
 
 - **PART 1** https://www.loom.com/share/2cf98d59da244de5b78aed8bfb6f20df
 - **PART 2** https://www.loom.com/share/e50192f0a13d4fb5b0aa6ba413dde320
 - **PART 3** https://www.loom.com/share/c8e8a234f05644438610b043a157a918
+
+Architecture and Codebase design
+
+- [High Level Design] https://www.loom.com/share/9791f1479b354f3e92a4abb151eada38
+- [State Management]
+
+https://www.loom.com/share/a50b8a95eb604fd2b77153ee2298fe32
+https://www.loom.com/share/87a7581c30af498cad2ee18498646895
+
+- [Low Level Design]
+  https://www.loom.com/share/16ac53e5b1944bb49c1e7bcefddef49b
+  https://www.loom.com/share/4356708a92fa41fbab4ee09e8361d5de
+  https://www.loom.com/share/7ca6281be1e94073a80fd9470fc084eb
+
+- [How to Create new node and Making Complex Nodes]
+  https://www.loom.com/share/653fc9327b2c4841a8ffedf551424c2d
 
 # Setup
 
@@ -37,6 +57,21 @@ npm run build
 npm run preview
 npm run test
 ```
+
+# Tech Stack
+
+## Frontend Tooling
+
+- **Vite Dev Server and Bundler** drives the fast HMR loop, asset hashing, and production build output that powers the development studio interface.
+- **Vitest** provides lightweight unit testing for stores, helpers, and the engine so rapid feedback covers core graph behaviors.
+- **Linting + Formatting (ESLint + Prettier)** enforce shared rules across `.ts`/`.vue` files and keep IDE snapshots in sync with the team style guide.
+
+## Major Libraries
+
+- **Vue 3** is the UI framework for declarative rendering, composition API helpers, and concurrent-friendly reactivity on the canvas layer.
+- **Pinia** manages store boundaries so graph state, history, persistence, execution, and UI concerns remain isolated yet easy to compose.
+- **Vue Flow helpers** (used through helpers like `applyNodeChanges`) keep canvas interactions performant by reusing identity-preserving change streams.
+- **Centralized Policy Flags** are grouped under `WORKFLOW_CONSTANTS` in `src/config/workflowConstants.ts`, so every timeout interval, retry count, or autosave debounce is controlled through a single central flag set.
 
 # Architecture
 
@@ -103,7 +138,7 @@ flowchart TB
   WorkFlowCanvas --> NodeRendererWrapper[NodeRendererWrapper]
   NodeRendererWrapper --> StartNodeRenderer[StartNodeRenderer]
   NodeRendererWrapper --> TransformNodeRenderer[TransformNodeRenderer]
-  NodeRendererWrapper --> DecisionNodeRenderer[DecisionNodeRenderer]
+  NodeRendererWrapper --> IfElseNodeRenderer[IfElseNodeRenderer]
   NodeRendererWrapper --> SwitchNodeRenderer[SwitchNodeRenderer]
   NodeRendererWrapper --> EndNodeRenderer[EndNodeRenderer]
   WorkFlowCanvas --> DeletableEdgeRenderer[DeletableEdgeRenderer]
