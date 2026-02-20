@@ -53,7 +53,73 @@ b. State Management - Pinia
 
 ## Architecture
 
-We will use Composition + Execution Strategy.
+The architecture use robust strategy to looking aspects like
+
+Performance
+
+- Handling Large Node Work Flow
+- Only targeting specific node change which
+
+### Component Performance
+
+The `WorkFlowCanvas` is marked as a heavy component because it wires the entire canvas, node renderers, and third-party visualization helpers. The split policy defined in `HEAVY_COMPONENT_SPLIT_POLICY.workflowCanvas` keeps the load timeout, fallback delay, and chunk name centralized so timing policies only live in one place and can be tuned without scattering numbers across the tree.
+
+High-level view:
+
+```
+App.vue (shell)
+│
+└── Suspense boundary for AsyncWorkFlowCanvasRenderer
+    │
+    └── WorkFlowCanvas chunk (lazy-loaded bundle)
+```
+
+Low-level flow:
+
+```mermaid
+flowchart TB
+  AppShell["App.vue shell"]
+  SuspenseBoundary["Suspense boundary"]
+  AsyncRenderer["AsyncWorkFlowCanvasRenderer"]
+  WorkFlowChunk["WorkFlowCanvas chunk"]
+  LoadingPlaceholder["Loading placeholder"]
+
+  AppShell --> SuspenseBoundary
+  SuspenseBoundary --> |"loader runs"| AsyncRenderer
+  AsyncRenderer --> WorkFlowChunk
+  SuspenseBoundary --> |"timeout or delay"| LoadingPlaceholder
+```
+
+**Pros**
+
+- Defers the heavy Vue Flow canvas until the user reaches the main layout, shrinking the initial bundle by the weight of the renderer + helpers.
+- Centralized `HEAVY_COMPONENT_SPLIT_POLICY.workflowCanvas` keeps timeout/fallback rules in one place, making it easier to tune retries or telemetry signals later.
+- Fallback content keeps the layout stable while the chunk downloads, so the rest of the page paints quickly.
+
+**Cons**
+
+- The async boundary can surface download failures, so logging/telemetry should catch loading errors and the fallback copy must stay purposeful.
+- If the component is needed on first paint, there is a tiny delay for fetching the chunk, so the fallback needs to feel like a safe placeholder.
+
+Accessiblity
+
+Maintanablity
+
+- How easy is to add a new category?
+- Node Base system use design pattern Comsable with Factory + Registry for creation on new node
+- Workflow Engine that runs over each node can choose the execution bases on registry pattern. Since each node has its own way to write its execution logic. It makes easy to change exectution logic without touching out nodes.
+-
+- How decouple the UI and Busingess logic are
+- Modular code so each can have its own unit test
+- Seperate module to handle export and import logic covering validations, seralization and deseralization.
+
+User Experience Consideration
+
+- Proper showcase of error during workflow execution. Invalid or broken nodes are highlited propery.
+
+Basic Principle Behind Node Creation.
+
+I called easch node as work node as each node does something.
 
 class BaseWorkNode {
 id: string
@@ -114,9 +180,22 @@ return condition ? outputs[0] : outputs[1];
 
 ## State Management
 
-Lets keep one state called WorkFlowCanvas that will use pinia
+Pinia is used to create stores and each store follows single responsibility boundaries:
 
-it will have nodes, edge, excutionLog, availableWorkNodes, selectedWorkNode
+- workflowGraphStore - graph nodes/edges state, adjacency indexes, and graph mutations
+- workflowHistoryStore - UI command history with undo/redo depth tracking
+- workflowPersistenceStore - autosave scheduling and import/export snapshot boundaries
+- workflowExecutionStore - workflow runtime execution state and execution log
+
+I am use a DAG design primarly to keep the worflow graph.
+
+State action takes actomic mutation strategry for all types of mutation like add, update, removal of nodes and edges and based on the change it does specific node update. This is required as Vue Flow request array of nodes and edges. In the state the nodes and edges are keept read only and actual mutations are keept in Map that applies chages to these nodes and edges with proper consistancy validation.
+
+Since workflow execution can change design of each node. This was required.
+
+- globalStore - It takes cares of state that is required accross every store and ui component - Currenly I have added only theme here but we can add states like feature flag, user profile
+
+The split-store design keeps graph, history, persistence, and execution concerns isolated while still composing together for workflow interactions.
 
 RenderWorkNode it base of Node of Vue Flow . for example
 
@@ -136,9 +215,7 @@ Actions
 
 ## Components
 
-- WorkFlowCanvas - Where nodes will be rendered
-- WorkFlowToolBar - It will have list of WorkNode with defualt config.
-- WorkFlowConfigPanel - On Select of a WorkNode it will prove option to change config.
+Component design is kept resuable specially for nodes expereince like delete, on click to configure is for all nodes. And each node can have multiple output ports base on it node desing.
 
 Trade Off of This Componsable + Strategy based design.
 
@@ -158,7 +235,7 @@ Cons:
 
 ## Each type of Node can validate and send a NodeErrorType error to workflow executor and highlites the node for better User Expereince.
 
-Why a robost Error Handling is required.
+The important part of any workflow system is proper node configuration and error may occur due mismatch expectation of workflow context and its own logic. So we need multy layer error handing. Also the layers can be independenlty testable giving us more confidence.
 
 ```
                           ┌──────────────────────────────┐

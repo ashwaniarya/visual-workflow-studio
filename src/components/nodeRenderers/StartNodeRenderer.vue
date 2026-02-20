@@ -4,14 +4,9 @@ import DynamicHandleRenderer from "./DynamicHandleRenderer.vue";
 import NodeRendererWrapper from "./NodeRendererWrapper.vue";
 import { useNodeExecutionState } from "../../composables/useNodeExecutionState";
 import { UI_STRINGS } from "../../localization/uiStrings";
+import type { IRenderWorkNodeProps } from "../../models/renderWorkNode";
 
-const props = defineProps<{
-  id: string;
-  data: {
-    workNode: { type: string; config: Record<string, unknown> };
-    portDefinition: PortDefinition;
-  };
-}>();
+const props = defineProps<IRenderWorkNodeProps>();
 
 const { executionCssClass, executionErrorMessage } = useNodeExecutionState(
   props.id,

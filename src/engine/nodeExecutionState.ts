@@ -1,4 +1,5 @@
 import type { ExecutionErrorCode } from './errors/nodeExecutionError'
+import type { ExecutionLogEntry } from '../models/executionLog'
 
 // ─── Per-Node Execution State ────────────────────────────────────────
 // Tracks the outcome of each node after a workflow run.
@@ -9,6 +10,7 @@ export type NodeExecutionStatus = 'success' | 'error' | 'skipped'
 export interface NodeExecutionState {
   status: NodeExecutionStatus
   errorMessage?: string
+  metaData: ExecutionLogEntry
   errorCode?: ExecutionErrorCode
 }
 
@@ -19,7 +21,6 @@ export type NodeExecutionStateMap = Map<string, NodeExecutionState>
 // Returned by executeWorkflow — gives the store both the log and the
 // per-node state map in a single object.
 
-import type { ExecutionLogEntry } from '../models/executionLog'
 
 export interface WorkflowExecutionResult {
   executionLog: ExecutionLogEntry[]

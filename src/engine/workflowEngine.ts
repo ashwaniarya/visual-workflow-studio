@@ -8,7 +8,7 @@ import type { WorkflowExecutionResult, NodeExecutionStateMap } from './nodeExecu
 import { NodeExecutionError } from './errors/nodeExecutionError'
 import { resolveNodeExecutor } from './nodeExecutorResolver'
 import { getNodeDefinition } from '../registry/nodeRegistry'
-import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
+import { WORKFLOW_CONSTANTS, VALID_NODE_TYPES_MAP } from '../config/workflowConstants'
 
 // ─── Adjacency Types ─────────────────────────────────────────────────
 
@@ -68,12 +68,12 @@ export function canConnect(
   }
 
   // Rule 4: StartNode cannot be a target
-  if (targetWorkNode.type === 'START') {
+  if (targetWorkNode.type === VALID_NODE_TYPES_MAP.START) {
     return false
   }
 
   // Rule 5: EndNode cannot be a source
-  if (sourceWorkNode.type === 'END') {
+  if (sourceWorkNode.type === VALID_NODE_TYPES_MAP.END) {
     return false
   }
 
@@ -111,7 +111,7 @@ export function buildWorkflow(
   }
 
   // Validate: exactly 1 START node
-  const startNodes = nodes.filter((n) => n.data?.workNode?.type === 'START')
+  const startNodes = nodes.filter((n) => n.data?.workNode?.type === VALID_NODE_TYPES_MAP.START)
   if (startNodes.length !== 1) {
     throw new Error(
       `Workflow must have exactly 1 Start node, found ${startNodes.length}`,
@@ -119,7 +119,7 @@ export function buildWorkflow(
   }
 
   // Validate: at least 1 END node
-  const endNodes = nodes.filter((n) => n.data?.workNode?.type === 'END')
+  const endNodes = nodes.filter((n) => n.data?.workNode?.type === VALID_NODE_TYPES_MAP.END)
   if (endNodes.length < 1) {
     throw new Error('Workflow must have at least 1 End node')
   }
@@ -137,7 +137,7 @@ export function executeWorkflow(
   const nodeExecutionStateMap: NodeExecutionStateMap = new Map()
 
   // Find the start node
-  const startNode = nodes.find((n) => n.data?.workNode?.type === 'START')
+  const startNode = nodes.find((n) => n.data?.workNode?.type === VALID_NODE_TYPES_MAP.START)
   if (!startNode || !startNode.data?.workNode) {
     throw new Error('Start node not found')
   }
@@ -194,12 +194,7 @@ export function executeWorkflow(
       }
     }
 
-    // Record per-node execution state
-    nodeExecutionStateMap.set(currentNode.id, {
-      status: executionStatus,
-      errorMessage,
-      errorCode,
-    })
+
 
     // Determine next node
     let nextNodeId: string | null = null
@@ -226,6 +221,13 @@ export function executeWorkflow(
       errorCode,
       timestamp: Date.now(),
     }
+    // Record per-node execution state
+    nodeExecutionStateMap.set(currentNode.id, {
+      status: executionStatus,
+      errorMessage,
+      metaData: logEntry,
+      errorCode,
+    })
     context.executionLog.push(logEntry)
 
     // On error, stop execution

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import type { Edge, EdgeChange, NodeChange } from '@vue-flow/core'
 import type { RenderWorkNode } from '../models/renderWorkNode'
+import { VALID_NODE_TYPES_MAP } from '../config/workflowConstants'
 import { useWorkflowGraphStore } from './workflowGraphStore'
 import { useWorkflowHistoryStore } from './workflowHistoryStore'
 import { useWorkflowPersistenceStore } from './workflowPersistenceStore'
@@ -48,9 +49,9 @@ describe('workflowGraphStore selective graph updates', () => {
     const initialNodesReference = workflowGraphStore.nodes
     const initialEdgesReference = workflowGraphStore.edges
 
-    const startNode = createRenderNode('start-node', 'START')
-    const transformNode = createRenderNode('transform-node', 'TRANSFORM')
-    const endNode = createRenderNode('end-node', 'END')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
+    const transformNode = createRenderNode('transform-node', VALID_NODE_TYPES_MAP.TRANSFORM)
+    const endNode = createRenderNode('end-node', VALID_NODE_TYPES_MAP.END)
 
     workflowGraphStore.addNode(startNode)
     workflowGraphStore.addNode(transformNode)
@@ -78,11 +79,11 @@ describe('workflowGraphStore selective graph updates', () => {
   it('prunes only invalid switch output edges after config update', () => {
     const workflowGraphStore = useWorkflowGraphStore()
 
-    const startNode = createRenderNode('start-node', 'START')
-    const switchNode = createRenderNode('switch-node', 'SWITCH')
-    const caseZeroEndNode = createRenderNode('end-node-zero', 'END')
-    const caseOneEndNode = createRenderNode('end-node-one', 'END')
-    const defaultEndNode = createRenderNode('end-node-default', 'END')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
+    const switchNode = createRenderNode('switch-node', VALID_NODE_TYPES_MAP.SWITCH)
+    const caseZeroEndNode = createRenderNode('end-node-zero', VALID_NODE_TYPES_MAP.END)
+    const caseOneEndNode = createRenderNode('end-node-one', VALID_NODE_TYPES_MAP.END)
+    const defaultEndNode = createRenderNode('end-node-default', VALID_NODE_TYPES_MAP.END)
 
     workflowGraphStore.addNode(startNode)
     workflowGraphStore.addNode(switchNode)
@@ -115,8 +116,8 @@ describe('workflowGraphStore selective graph updates', () => {
 
   it('applies node and edge change sets with targeted mutations', () => {
     const workflowGraphStore = useWorkflowGraphStore()
-    const startNode = createRenderNode('start-node', 'START')
-    const endNode = createRenderNode('end-node', 'END')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
+    const endNode = createRenderNode('end-node', VALID_NODE_TYPES_MAP.END)
 
     workflowGraphStore.addNode(startNode)
     workflowGraphStore.addNode(endNode)
@@ -145,9 +146,9 @@ describe('workflowGraphStore selective graph updates', () => {
 
   it('keeps adjacency consistent for duplicate edge-id rewires through replaceGraphData', () => {
     const workflowGraphStore = useWorkflowGraphStore()
-    const sourceNode = createRenderNode('source-node', 'START')
-    const previousTargetNode = createRenderNode('previous-target-node', 'END')
-    const latestTargetNode = createRenderNode('latest-target-node', 'END')
+    const sourceNode = createRenderNode('source-node', VALID_NODE_TYPES_MAP.START)
+    const previousTargetNode = createRenderNode('previous-target-node', VALID_NODE_TYPES_MAP.END)
+    const latestTargetNode = createRenderNode('latest-target-node', VALID_NODE_TYPES_MAP.END)
 
     workflowGraphStore.replaceGraphData(
       [sourceNode, previousTargetNode, latestTargetNode],
@@ -172,7 +173,7 @@ describe('workflowGraphStore selective graph updates', () => {
   it('restores node config snapshots through undo and redo', () => {
     const workflowGraphStore = useWorkflowGraphStore()
     const workflowHistoryStore = useWorkflowHistoryStore()
-    const transformNode = createRenderNode('transform-node', 'TRANSFORM')
+    const transformNode = createRenderNode('transform-node', VALID_NODE_TYPES_MAP.TRANSFORM)
     workflowGraphStore.addNode(transformNode, { shouldAutosave: false })
 
     const workflowNodeInStore = workflowGraphStore.nodeById.get('transform-node')
@@ -199,7 +200,7 @@ describe('workflowGraphStore selective graph updates', () => {
   it('updates node position without recording undo history', () => {
     const workflowGraphStore = useWorkflowGraphStore()
     const workflowHistoryStore = useWorkflowHistoryStore()
-    const startNode = createRenderNode('start-node', 'START')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
     workflowGraphStore.addNode(startNode, { shouldAutosave: false })
     workflowHistoryStore.clearUiCommandHistory()
 
@@ -220,7 +221,7 @@ describe('workflowGraphStore selective graph updates', () => {
   it('does not push history for no-op move update', () => {
     const workflowGraphStore = useWorkflowGraphStore()
     const workflowHistoryStore = useWorkflowHistoryStore()
-    const startNode = createRenderNode('start-node', 'START')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
     workflowGraphStore.addNode(startNode, { shouldAutosave: false })
     workflowHistoryStore.clearUiCommandHistory()
 
@@ -238,7 +239,7 @@ describe('workflowGraphStore selective graph updates', () => {
   it('schedules autosave when applyNodeChanges receives a position change', () => {
     const workflowGraphStore = useWorkflowGraphStore()
     const workflowPersistenceStore = useWorkflowPersistenceStore()
-    const startNode = createRenderNode('start-node', 'START')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
     workflowGraphStore.addNode(startNode, { shouldAutosave: false })
 
     let scheduledWorkflowAutosaveCount = 0
@@ -264,7 +265,7 @@ describe('workflowGraphStore selective graph updates', () => {
   it('does not schedule autosave for no-op position changes from applyNodeChanges', () => {
     const workflowGraphStore = useWorkflowGraphStore()
     const workflowPersistenceStore = useWorkflowPersistenceStore()
-    const startNode = createRenderNode('start-node', 'START')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
     workflowGraphStore.addNode(startNode, { shouldAutosave: false })
 
     let scheduledWorkflowAutosaveCount = 0

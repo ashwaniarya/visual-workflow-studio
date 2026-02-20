@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Edge } from '@vue-flow/core'
 import type { RenderWorkNode } from '../../models/renderWorkNode'
+import { VALID_NODE_TYPES_MAP } from '../../config/workflowConstants'
 import {
   addEdgeToAdjacencyIndex,
   assertGraphStateConsistency,
@@ -12,12 +13,12 @@ import {
 function createRenderNode(nodeId: string): RenderWorkNode {
   return {
     id: nodeId,
-    type: 'START',
+    type: VALID_NODE_TYPES_MAP.START,
     position: { x: 0, y: 0 },
     data: {
       workNode: {
         id: nodeId,
-        type: 'START',
+        type: VALID_NODE_TYPES_MAP.START,
         config: {},
         getExecutor: () => ({ execute: () => null }),
       },

@@ -8,3 +8,9 @@ export interface RenderWorkNodeData {
 }
 
 export type RenderWorkNode = VueFlowNode<RenderWorkNodeData>
+
+
+export interface IRenderWorkNodeProps {
+  id: string
+  data: RenderWorkNodeData
+}

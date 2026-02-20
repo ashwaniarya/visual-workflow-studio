@@ -104,9 +104,7 @@ export const useWorkflowGraphStore = defineStore('workflowGraph', {
     },
 
     assertGraphConsistency() {
-      if (import.meta.env.PROD) {
-        return
-      }
+      
 
       assertGraphStateConsistency(
         this.graphNodes,
@@ -213,6 +211,12 @@ export const useWorkflowGraphStore = defineStore('workflowGraph', {
       return true
     },
 
+    /**
+     * This function is used to apply a config snapshot to a node.
+     * @param nodeId - The id of the node to apply the config snapshot to.
+     * @param configSnapshot - The config snapshot to apply to the node.
+     * @returns True if the config snapshot was applied successfully, false otherwise.
+     */
     applyNodeConfigSnapshotPrimitive(nodeId: string, configSnapshot: NodeConfigSnapshot): boolean {
       const node = this.nodeById.get(nodeId)
       if (!node?.data?.workNode) {
@@ -231,6 +235,11 @@ export const useWorkflowGraphStore = defineStore('workflowGraph', {
       return true
     },
 
+    /**
+     * This function is used to get the snapshot of worknode config.
+     * @param nodeId - The id of the node to get the config snapshot of.
+     * @returns The config snapshot of the node, or null if the node is not found.
+     */
     getNodeConfigSnapshotByNodeId(nodeId: string): NodeConfigSnapshot | null {
       const node = this.nodeById.get(nodeId)
       if (!node?.data?.workNode) {
@@ -244,7 +253,7 @@ export const useWorkflowGraphStore = defineStore('workflowGraph', {
         .map((edgeId) => this.edgeById.get(edgeId))
         .filter((edge): edge is Edge => Boolean(edge))
     },
-
+ 
     applyMoveNodePrimitive(nodeId: string, position: NodeCanvasPosition): boolean {
       const node = this.nodeById.get(nodeId)
       if (node) {
@@ -255,6 +264,7 @@ export const useWorkflowGraphStore = defineStore('workflowGraph', {
       return false
     },
 
+    // Main API function to add a node to the graph.
     addNode(renderNode: RenderWorkNode, options?: { shouldAutosave?: boolean }): boolean {
       const addNodeCommand = createAddNodeCommand({
         renderNode,

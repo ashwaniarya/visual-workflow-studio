@@ -4,7 +4,7 @@ import type { Edge } from '@vue-flow/core'
 import type { RenderWorkNode } from '../models/renderWorkNode'
 import { useWorkflowGraphStore } from './workflowGraphStore'
 import { useWorkflowHistoryStore } from './workflowHistoryStore'
-import { WORKFLOW_CONSTANTS } from '../config/workflowConstants'
+import { WORKFLOW_CONSTANTS, VALID_NODE_TYPES_MAP } from '../config/workflowConstants'
 import { getNodeDefinition } from '../registry/nodeRegistry'
 import { createWorkNode } from '../factory/workNodeFactory'
 import { executeWorkflow } from '../engine/workflowEngine'
@@ -48,8 +48,8 @@ describe('workflowHistoryStore command behavior', () => {
   it('undoes and redoes graph add and remove commands', () => {
     const workflowGraphStore = useWorkflowGraphStore()
     const workflowHistoryStore = useWorkflowHistoryStore()
-    const startNode = createRenderNode('start-node', 'START')
-    const endNode = createRenderNode('end-node', 'END')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
+    const endNode = createRenderNode('end-node', VALID_NODE_TYPES_MAP.END)
     const edge = createRenderEdge('edge-start-end', 'start-node', 'end-node')
 
     workflowGraphStore.addNode(startNode, { shouldAutosave: false })
@@ -70,8 +70,8 @@ describe('workflowHistoryStore command behavior', () => {
   it('clears redo stack after new command is executed', () => {
     const workflowGraphStore = useWorkflowGraphStore()
     const workflowHistoryStore = useWorkflowHistoryStore()
-    const startNode = createRenderNode('start-node', 'START')
-    const endNode = createRenderNode('end-node', 'END')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
+    const endNode = createRenderNode('end-node', VALID_NODE_TYPES_MAP.END)
 
     workflowGraphStore.addNode(startNode, { shouldAutosave: false })
     workflowGraphStore.addNode(endNode, { shouldAutosave: false })
@@ -88,7 +88,7 @@ describe('workflowHistoryStore command behavior', () => {
 
     for (let commandIndex = 0; commandIndex < WORKFLOW_CONSTANTS.MAX_UNDO_REDO_HISTORY_STEPS + 5; commandIndex++) {
       workflowGraphStore.addNode(
-        createRenderNode(`node-${commandIndex}`, 'END'),
+        createRenderNode(`node-${commandIndex}`, VALID_NODE_TYPES_MAP.END),
         { shouldAutosave: false },
       )
     }
@@ -103,9 +103,9 @@ describe('workflowHistoryStore command behavior', () => {
 
   it('executes successfully after adding nodes without requiring reload', () => {
     const workflowGraphStore = useWorkflowGraphStore()
-    const startNode = createRenderNode('start-node', 'START')
-    const transformNode = createRenderNode('transform-node', 'TRANSFORM')
-    const endNode = createRenderNode('end-node', 'END')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
+    const transformNode = createRenderNode('transform-node', VALID_NODE_TYPES_MAP.TRANSFORM)
+    const endNode = createRenderNode('end-node', VALID_NODE_TYPES_MAP.END)
 
     workflowGraphStore.addNode(startNode, { shouldAutosave: false })
     workflowGraphStore.addNode(transformNode, { shouldAutosave: false })
@@ -128,9 +128,9 @@ describe('workflowHistoryStore command behavior', () => {
   it('executes successfully after add-node undo and redo cycle', () => {
     const workflowGraphStore = useWorkflowGraphStore()
     const workflowHistoryStore = useWorkflowHistoryStore()
-    const startNode = createRenderNode('start-node', 'START')
-    const transformNode = createRenderNode('transform-node', 'TRANSFORM')
-    const endNode = createRenderNode('end-node', 'END')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
+    const transformNode = createRenderNode('transform-node', VALID_NODE_TYPES_MAP.TRANSFORM)
+    const endNode = createRenderNode('end-node', VALID_NODE_TYPES_MAP.END)
 
     workflowGraphStore.addNode(startNode, { shouldAutosave: false })
     workflowGraphStore.addNode(endNode, { shouldAutosave: false })
@@ -162,9 +162,9 @@ describe('workflowHistoryStore command behavior', () => {
     const workflowGraphStore = useWorkflowGraphStore()
     const workflowHistoryStore = useWorkflowHistoryStore()
     const workflowSerializer = new WorkNodeSerialization()
-    const startNode = createRenderNode('start-node', 'START')
-    const transformNode = createRenderNode('transform-node', 'TRANSFORM')
-    const endNode = createRenderNode('end-node', 'END')
+    const startNode = createRenderNode('start-node', VALID_NODE_TYPES_MAP.START)
+    const transformNode = createRenderNode('transform-node', VALID_NODE_TYPES_MAP.TRANSFORM)
+    const endNode = createRenderNode('end-node', VALID_NODE_TYPES_MAP.END)
 
     workflowGraphStore.addNode(startNode, { shouldAutosave: false })
     workflowGraphStore.addNode(transformNode, { shouldAutosave: false })

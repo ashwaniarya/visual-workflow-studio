@@ -5,6 +5,7 @@ import { executeWorkflow, buildWorkflow, canConnect } from './workflowEngine'
 import { ExecutionErrorCode } from './errors/nodeExecutionError'
 import { createWorkNode } from '../factory/workNodeFactory'
 import { getNodeDefinition } from '../registry/nodeRegistry'
+import { VALID_NODE_TYPES_MAP } from '../config/workflowConstants'
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -13,14 +14,14 @@ import { getNodeDefinition } from '../registry/nodeRegistry'
 import '../registry/nodeRegistry'
 
 function makeStartNode(id: string, inputPayload: Record<string, unknown> = {}): RenderWorkNode {
-  const definition = getNodeDefinition('START')
+  const definition = getNodeDefinition(VALID_NODE_TYPES_MAP.START)
   const workNode = createWorkNode(id, definition)
   if (Object.keys(inputPayload ?? {}).length > 0) {
     workNode.config.inputPayload = inputPayload
   }
   return {
     id,
-    type: 'START',
+    type: VALID_NODE_TYPES_MAP.START,
     position: { x: 0, y: 0 },
     data: {
       workNode,
@@ -30,7 +31,7 @@ function makeStartNode(id: string, inputPayload: Record<string, unknown> = {}): 
 }
 
 function makeSwitchNode(id: string, config: Record<string, unknown>): RenderWorkNode {
-  const definition = getNodeDefinition('SWITCH')
+  const definition = getNodeDefinition(VALID_NODE_TYPES_MAP.SWITCH)
   const workNode = createWorkNode(id, definition)
   Object.assign(workNode.config, config)
   const portDefinition = definition.portResolver
@@ -38,7 +39,7 @@ function makeSwitchNode(id: string, config: Record<string, unknown>): RenderWork
     : definition.portDefinition
   return {
     id,
-    type: 'SWITCH',
+    type: VALID_NODE_TYPES_MAP.SWITCH,
     position: { x: 200, y: 0 },
     data: {
       workNode,
@@ -48,11 +49,11 @@ function makeSwitchNode(id: string, config: Record<string, unknown>): RenderWork
 }
 
 function makeEndNode(id: string): RenderWorkNode {
-  const definition = getNodeDefinition('END')
+  const definition = getNodeDefinition(VALID_NODE_TYPES_MAP.END)
   const workNode = createWorkNode(id, definition)
   return {
     id,
-    type: 'END',
+    type: VALID_NODE_TYPES_MAP.END,
     position: { x: 400, y: 0 },
     data: {
       workNode,
@@ -62,12 +63,12 @@ function makeEndNode(id: string): RenderWorkNode {
 }
 
 function makeTransformNode(id: string, config: Record<string, unknown>): RenderWorkNode {
-  const definition = getNodeDefinition('TRANSFORM')
+  const definition = getNodeDefinition(VALID_NODE_TYPES_MAP.TRANSFORM)
   const workNode = createWorkNode(id, definition)
   Object.assign(workNode.config, config)
   return {
     id,
-    type: 'TRANSFORM',
+    type: VALID_NODE_TYPES_MAP.TRANSFORM,
     position: { x: 200, y: 0 },
     data: {
       workNode,
@@ -77,12 +78,12 @@ function makeTransformNode(id: string, config: Record<string, unknown>): RenderW
 }
 
 function makeDecisionNode(id: string, config: Record<string, unknown>): RenderWorkNode {
-  const definition = getNodeDefinition('DECISION')
+  const definition = getNodeDefinition(VALID_NODE_TYPES_MAP.IFELSE)
   const workNode = createWorkNode(id, definition)
   Object.assign(workNode.config, config)
   return {
     id,
-    type: 'DECISION',
+    type: VALID_NODE_TYPES_MAP.IFELSE,
     position: { x: 200, y: 0 },
     data: {
       workNode,

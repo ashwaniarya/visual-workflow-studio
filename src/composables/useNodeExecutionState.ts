@@ -13,6 +13,7 @@ export function useNodeExecutionState(nodeId: string) {
     return workflowExecutionStore.nodeExecutionStateMap.get(nodeId)
   })
 
+
   const executionCssClass = computed<string>(() => {
     if (!executionState.value) return ''
     return executionState.value.status === 'error'

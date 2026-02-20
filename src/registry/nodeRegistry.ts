@@ -5,15 +5,16 @@ import { StartExecutor } from '../engine/executors/startExecutor'
 import { EndExecutor } from '../engine/executors/endExecutor'
 import { resolveTransformExecutor } from '../engine/executors/transform/resolveTransformExecutor'
 import { DropdownDecisionExecutor } from '../engine/executors/decision/dropdownDecisionExecutor'
+import { DisplayExecutor } from '../engine/executors/misc/displayExecutor'
 import { SwitchNodeExecutor } from '../engine/executors/switch/switchNodeExecutor'
 import { SUPPORTED_OPERATORS } from '../engine/executors/conditionEvaluator'
-
+import { VALID_NODE_TYPES_MAP } from '../config/workflowConstants'
 // ─── Node Definition Interface ───────────────────────────────────────
 
 export interface NodeDefinition {
   type: string
   label: string
-  category: 'trigger' | 'processor' | 'control' | 'terminal'
+  category: 'trigger' | 'processor' | 'control' | 'terminal' | 'misc'
   icon: string
   portDefinition: PortDefinition
   defaultConfig: Record<string, unknown>
@@ -45,7 +46,7 @@ export function getAllNodeDefinitions(): NodeDefinition[] {
 // ─── Built-in Node Registrations ─────────────────────────────────────
 
 registerNode({
-  type: 'START',
+  type: VALID_NODE_TYPES_MAP.START,
   label: 'Start',
   category: 'trigger',
   icon: '▶',
@@ -69,7 +70,7 @@ registerNode({
 })
 
 registerNode({
-  type: 'TRANSFORM',
+  type: VALID_NODE_TYPES_MAP.TRANSFORM,
   label: 'Transform',
   category: 'processor',
   icon: '🔄',
@@ -107,7 +108,7 @@ registerNode({
 })
 
 registerNode({
-  type: 'IFELSE',
+  type: VALID_NODE_TYPES_MAP.IFELSE,
   label: 'If / Else',
   category: 'control',
   icon: '🔀',
@@ -171,7 +172,7 @@ function resolveSwitchPorts(config: Record<string, unknown>): PortDefinition {
 }
 
 registerNode({
-  type: 'SWITCH',
+  type: VALID_NODE_TYPES_MAP.SWITCH,
   label: 'Switch',
   category: 'control',
   icon: '🔀',
@@ -203,7 +204,7 @@ registerNode({
 })
 
 registerNode({
-  type: 'END',
+  type: VALID_NODE_TYPES_MAP.END,
   label: 'End',
   category: 'terminal',
   icon: '⏹',
@@ -214,4 +215,18 @@ registerNode({
   defaultConfig: {},
   configSchema: [],
   executorResolver: () => new EndExecutor(),
+})
+
+registerNode({
+  type: VALID_NODE_TYPES_MAP.DISPLAY,
+  label: 'Display',
+  category: 'misc',
+  icon: '🔍',
+  portDefinition: {
+    inputCount: 1,
+    outputPorts: [{ id:'out-0', label: 'Output' }],
+  },
+  defaultConfig: {},
+  configSchema: [],
+  executorResolver: () => new DisplayExecutor(),
 })
