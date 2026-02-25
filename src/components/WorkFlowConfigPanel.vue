@@ -116,6 +116,8 @@ function buildConfigFieldControlId(fieldKey: string): string {
               input-type="number"
               :model-value="getStringFieldValue(field.key)"
               :placeholder="field.placeholder"
+              :min="field.min"
+              :max="field.max"
               :control-id="buildConfigFieldControlId(field.key)"
               @update:model-value="onFieldChange(field.key, Number($event))"
             />

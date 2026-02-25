@@ -23,6 +23,7 @@ import IfElseNodeRenderer from "./nodeRenderers/IfElseNodeRenderer.vue";
 import SwitchNodeRenderer from "./nodeRenderers/SwitchNodeRenderer.vue";
 import EndNodeRenderer from "./nodeRenderers/EndNodeRenderer.vue";
 import DisplayNodeRenderer from "./nodeRenderers/DisplayNodeRenderer.vue";
+import UrlShortenerNodeRenderer from "./nodeRenderers/UrlShortenerNodeRenderer.vue";
 import DeletableEdgeRenderer from "./edgeRenderers/DeletableEdgeRenderer.vue";
 import WorkflowMiniMapPanel from "./WorkflowMiniMapPanel.vue";
 
@@ -164,6 +165,9 @@ function onVueFlowInit(flowInstance: {
       </template>
       <template #node-DISPLAY="nodeProps">
         <DisplayNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
+      </template>
+      <template #node-URL_SHORTENER="nodeProps">
+        <UrlShortenerNodeRenderer :id="nodeProps.id" :data="nodeProps.data" />
       </template>
 
       <template #edge-DELETABLE="edgeProps">

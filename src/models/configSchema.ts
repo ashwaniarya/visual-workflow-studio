@@ -5,6 +5,8 @@ export interface ConfigFieldDefinition {
   options?: string[]
   defaultValue?: unknown
   placeholder?: string
+  min?: number
+  max?: number
   visibleWhen?: {
     field: string
     in: unknown[]

@@ -16,6 +16,8 @@ interface BaseInputProps {
   hasValidationError?: boolean;
   placeholder?: string;
   isDisabled?: boolean;
+  min?: number;
+  max?: number;
   state?: InputVisualState;
   size?: InputSize;
 }
@@ -31,6 +33,8 @@ const properties = withDefaults(defineProps<BaseInputProps>(), {
   hasValidationError: false,
   placeholder: "",
   isDisabled: false,
+  min: undefined,
+  max: undefined,
   state: "default",
   size: "medium",
 });
@@ -71,6 +75,8 @@ function emitInputValue(event: Event) {
     :required="properties.isRequired"
     :placeholder="properties.placeholder"
     :value="properties.modelValue"
+    :min="properties.min"
+    :max="properties.max"
     :disabled="properties.isDisabled"
     @input="emitInputValue"
     @change="emitInputValue"

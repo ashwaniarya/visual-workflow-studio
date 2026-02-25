@@ -7,8 +7,9 @@ import { resolveTransformExecutor } from '../engine/executors/transform/resolveT
 import { DropdownDecisionExecutor } from '../engine/executors/decision/dropdownDecisionExecutor'
 import { DisplayExecutor } from '../engine/executors/misc/displayExecutor'
 import { SwitchNodeExecutor } from '../engine/executors/switch/switchNodeExecutor'
+import { UrlShortenerExecutor } from '../engine/executors/urlShortener/urlShortenerExecutor'
 import { SUPPORTED_OPERATORS } from '../engine/executors/conditionEvaluator'
-import { VALID_NODE_TYPES_MAP } from '../config/workflowConstants'
+import { VALID_NODE_TYPES_MAP, WORKFLOW_CONSTANTS } from '../config/workflowConstants'
 // ─── Node Definition Interface ───────────────────────────────────────
 
 export interface NodeDefinition {
@@ -229,4 +230,36 @@ registerNode({
   defaultConfig: {},
   configSchema: [],
   executorResolver: () => new DisplayExecutor(),
+})
+
+registerNode({
+  type: VALID_NODE_TYPES_MAP.URL_SHORTENER,
+  label: 'URL Shortener',
+  category: 'processor',
+  icon: '🔗',
+  portDefinition: {
+    inputCount: 1,
+    outputPorts: [{ id: 'out-0', label: 'Output' }],
+  },
+  defaultConfig: {
+    targetField: '',
+    shortenedLength: WORKFLOW_CONSTANTS.URL_SHORTENER_DEFAULT_LENGTH,
+  },
+  configSchema: [
+    {
+      key: 'targetField',
+      label: 'Target Field',
+      fieldType: 'text',
+      placeholder: 'e.g. url',
+    },
+    {
+      key: 'shortenedLength',
+      label: 'Shortened Length',
+      fieldType: 'number',
+      min: WORKFLOW_CONSTANTS.URL_SHORTENER_MIN_LENGTH,
+      max: WORKFLOW_CONSTANTS.URL_SHORTENER_MAX_LENGTH,
+      placeholder: '6–50',
+    },
+  ],
+  executorResolver: () => new UrlShortenerExecutor(),
 })

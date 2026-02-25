@@ -105,6 +105,7 @@ export const UI_STRINGS = {
     switchNodeHeader: "🔀 Switch",
     switchCaseLabel: "cases",
     endNodeHeader: "⏹ End",
+    urlShortenerNodeHeader: "🔗 URL Shortener",
     deleteNodeButtonTitle: "Delete node",
     deleteNodeButtonAriaLabel: "Delete node",
   },
